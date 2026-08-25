@@ -100,7 +100,12 @@
         /* `movable` is the hint tint; it can be switched off without
            losing the ability to pick the checker up. */
         if (sources[n] && opts.showSources !== false) pt.classList.add('movable');
-        if (targets[n]) pt.classList.add(targets[n].pin ? 'target-pin' : 'target');
+        if (targets[n]) {
+          pt.classList.add(targets[n].pin ? 'target-pin' : 'target');
+          /* A coach warning overrides the plain destination tint. */
+          if (targets[n].risk) pt.classList.add('risk-' + targets[n].risk);
+          if (targets[n].title) pt.title = targets[n].title;
+        }
         if (opts.hint && opts.hint.from === n) pt.classList.add('hintsrc');
         if (opts.hint && opts.hint.to === n) pt.classList.add('hintdst');
 

@@ -263,6 +263,169 @@
   })();
 
   /* ---------------------------------------------------------------- */
+  describe('Coach — turn review');
+
+  var Coach = window.Coach, Store = window.Store;
+
+  (function () {
+    /* Drill 1: 4→1 takes the mana. Playing it must grade as best;
+       ignoring it must grade as a blunder and name the mana. */
+    var d = C.DRILLS[0];
+    var start = E.fromSpec(d.spec, 'W', {});
+    E.setRoll(start, d.roll[0], d.roll[1]);
+
+    var manaPlan = start.plans.filter(function (pl) {
+      return pl.some(function (m) { return m.from === 4 && m.to === 1; });
+    })[0];
+    ok('a mana-taking plan exists', !!manaPlan);
+
+    var r1 = Coach.reviewTurn(start, manaPlan);
+    ok('taking the mana is graded best', r1 && r1.grade.key === 'best', r1 && r1.grade.key);
+
+    /* Must ignore point 1 entirely: 6→1 with the 5 also takes the mana,
+       so filtering only on 4→1 would still pick a mana-taking line. */
+    var missPlan = start.plans.filter(function (pl) {
+      return !pl.some(function (m) { return m.to === 1; });
+    })[0];
+    ok('a plan that ignores the mana exists', !!missPlan);
+    var r2 = Coach.reviewTurn(start, missPlan);
+    ok('missing it is graded a blunder', r2 && r2.grade.key === 'blunder', r2 && r2.grade.key);
+    ok('and the cost is large', r2 && r2.loss > 100, r2 && String(r2.loss));
+    ok('and the reason mentions the mana', r2 && /mana/i.test(r2.why), r2 && r2.why);
+    ok('and it shows the better line', r2 && r2.bestLine.indexOf('4→1') >= 0, r2 && r2.bestLine);
+  })();
+
+  (function () {
+    /* Order of the same two moves is the same play, not a mistake. */
+    var s = E.fromSpec({ 13: 'WWWWW', 8: 'WWWWW', 6: 'WWWWW',
+                         12: 'BBBBB', 11: 'BBBBB', 10: 'BBBBB' }, 'W', {});
+    E.setRoll(s, 3, 1);
+    var best = null, bs = -Infinity;
+    s.plans.forEach(function (pl) { var v = window.AI.scorePlan(s, pl); if (v > bs) { bs = v; best = pl; } });
+    var reversed = best.slice().reverse();
+    var r = Coach.reviewTurn(s, reversed);
+    ok('the same moves in the other order still grade best', r && r.grade.key === 'best', r && r.grade.key);
+    ok('and are reported as the same play', r && r.same === true);
+  })();
+
+  /* The drills are the app's stated answers. If the evaluator disagrees
+     with one, either the drill or the evaluator is wrong and a learner
+     gets told two different things — so assert they agree. */
+  (function () {
+    C.DRILLS.forEach(function (d, i) {
+      var tag = 'drill ' + (i + 1) + ' (' + d.title + ')';
+      var s = E.fromSpec(d.spec, 'W', {});
+      E.setRoll(s, d.roll[0], d.roll[1]);
+      var best = null, bs = -Infinity;
+      s.plans.forEach(function (pl) {
+        var v = window.AI.scorePlan(s, pl);
+        if (v > bs) { bs = v; best = pl; }
+      });
+      ok(tag + ': engine picks a line', !!best);
+      if (!best) return;
+      var line = Coach.line(best);
+      if (d.key) {
+        ok(tag + ': coach agrees with the answer key',
+           d.key.every(function (k) {
+             return best.some(function (m) { return m.from === k.from && (m.off ? 0 : m.to) === k.to; });
+           }), 'engine prefers ' + line);
+      }
+      if (d.avoid) {
+        ok(tag + ': coach also avoids ' + d.avoid.join(','),
+           !best.some(function (m) { return d.avoid.indexOf(m.from) >= 0; }), 'engine prefers ' + line);
+      }
+    });
+  })();
+
+  describe('Coach — move risk');
+
+  (function () {
+    /* Two checkers left on the start point; moving one leaves the mana. */
+    var d = C.DRILLS[1];
+    var s = E.fromSpec(d.spec, 'W', {});
+    E.setRoll(s, d.roll[0], d.roll[1]);
+
+    var leave = E.legalNow(s).filter(function (m) { return m.from === 24 && m.to === 19; })[0];
+    ok('the risky move exists', !!leave);
+    var risk = Coach.moveRisk(s, leave);
+    ok('it is flagged', !!risk);
+    eq('as a mana risk', risk && risk.level, 'mana');
+    ok('naming the exposed numbers', risk && risk.shots > 0);
+
+    /* Playing the 6 first, then the 5, clears the point: safe. */
+    var first = E.legalNow(s).filter(function (m) { return m.from === 24 && m.to === 18; })[0];
+    E.apply(s, first);
+    var second = E.legalNow(s).filter(function (m) { return m.from === 24 && m.to === 19; })[0];
+    ok('the second checker can still leave', !!second);
+    var r2 = Coach.moveRisk(s, second);
+    ok('and clearing the point is not a mana risk',
+       !r2 || r2.level !== 'mana', r2 && r2.level);
+  })();
+
+  (function () {
+    var s = E.newGame();
+    E.setRoll(s, 6, 5);
+    var mv = E.legalNow(s)[0];
+    var risk = Coach.moveRisk(s, mv);
+    ok('opening moves are not flagged as mana risks',
+       !risk || risk.level !== 'mana', risk && risk.level);
+  })();
+
+  /* ---------------------------------------------------------------- */
+  describe('Persistence');
+
+  (function () {
+    ok('localStorage is usable in this browser', Store.available);
+
+    /* Round-trip a mid-turn game: board at roll time + roll + moves. */
+    var s = E.newGame();
+    E.setRoll(s, 5, 3);
+    var turnStart = E.clone(s);
+    E.apply(s, E.legalNow(s)[0]);
+    eq('one move played', s.played.length, 1);
+
+    var blob = JSON.parse(JSON.stringify(Store.serialiseGame(s, turnStart)));
+    var back = Store.deserialiseGame(blob);
+    ok('a mid-turn game round-trips', !!back);
+    eq('same turn', back.state.turn, s.turn);
+    eq('same played count', back.state.played.length, s.played.length);
+    eq('same dice left', back.state.dice.join(), s.dice.join());
+    eq('plans were rebuilt, not stored', back.state.plans.length > 0, true);
+    var same = true;
+    for (var i = 1; i <= 24; i++)
+      if (back.state.points[i].join('') !== s.points[i].join('')) same = false;
+    ok('the board matches exactly', same);
+    ok('the same moves are still legal',
+       E.legalNow(back.state).length === E.legalNow(s).length);
+
+    /* Between turns there is no roll to replay. */
+    var idle = E.newGame();
+    var b2 = Store.deserialiseGame(JSON.parse(JSON.stringify(Store.serialiseGame(idle, null))));
+    ok('an idle game round-trips', !!b2 && b2.turnStart === null);
+    eq('with no dice pending', b2.state.dice.length, 0);
+
+    /* Bear-off counts must survive, since fromSpec infers them. */
+    var late = E.fromSpec({ 3: 'WW', 2: 'W', 20: 'BBBB', 21: 'BBBB' }, 'W', {});
+    var b3 = Store.deserialiseGame(JSON.parse(JSON.stringify(Store.serialiseGame(late, null))));
+    ok('a part-borne-off game round-trips', !!b3);
+    eq('White off count survives', b3.state.off.W, late.off.W);
+    eq('Black off count survives', b3.state.off.B, late.off.B);
+
+    /* Junk must be rejected rather than loaded as a corrupt board. */
+    ok('a bad version is rejected', Store.deserialiseGame({ v: 99, board: {} }) === null);
+    ok('null is rejected', Store.deserialiseGame(null) === null);
+    ok('a board that does not add up is rejected',
+       Store.deserialiseGame({ v: 1, board: { 5: 'WW' }, off: { W: 0, B: 0 }, turn: 'W' }) === null);
+
+    /* An impossible replay falls back to the start of the turn. */
+    var bogus = Store.serialiseGame(s, turnStart);
+    bogus.played = [{ from: 7, to: 99, die: 5, off: false }];
+    var b4 = Store.deserialiseGame(JSON.parse(JSON.stringify(bogus)));
+    ok('an unreplayable move falls back to the turn start', !!b4);
+    eq('with nothing played', b4.state.played.length, 0);
+  })();
+
+  /* ---------------------------------------------------------------- */
   describe('Lesson diagrams');
 
   C.LESSONS.forEach(function (l, i) {

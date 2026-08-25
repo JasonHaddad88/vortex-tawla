@@ -111,6 +111,24 @@
   background: rgba(251,191,36,.30);
   filter: drop-shadow(0 0 12px rgba(251,191,36,.55));
 }
+/* Coach warnings on candidate destinations. The mana variant is loud on
+   purpose — it is the one mistake that loses the game outright. */
+.pt.risk-blot .tri {
+  background: rgba(251,191,36,.20);
+  filter: drop-shadow(0 0 8px rgba(251,191,36,.4));
+}
+.pt.risk-mana .tri {
+  background: rgba(239,68,68,.34);
+  filter: drop-shadow(0 0 14px rgba(239,68,68,.7));
+}
+.pt.risk-mana::after {
+  content: '!';
+  position: absolute; left: 50%; top: 42%;
+  transform: translate(-50%, -50%);
+  color: #fff; font-weight: 700; font-size: .9rem;
+  text-shadow: 0 0 8px rgba(239,68,68,.9);
+  pointer-events: none;
+}
 .pt.hintsrc .tri { background: rgba(103,232,249,.28); }
 .pt.hintdst .tri { background: rgba(103,232,249,.20); filter: drop-shadow(0 0 10px var(--cyan-glow)); }
 
@@ -264,6 +282,39 @@
 .log .entry.w { border-left: 2px solid var(--chk-w); }
 .log .entry.b { border-left: 2px solid var(--chk-b); }
 .log .entry .tag { color: var(--warning); }
+
+/* ---- coach ----------------------------------------------------- */
+
+.coach-empty { color: var(--muted); font-size: .8rem; font-style: italic; }
+.coach-verdict {
+  display: flex; align-items: center; gap: .5rem;
+  margin-bottom: .5rem; flex-wrap: wrap;
+}
+.coach-verdict .cost { font-family: var(--mono); font-size: .7rem; color: var(--muted); }
+.coach-body { font-size: .82rem; }
+.coach-body .played, .coach-body .better, .coach-body .neutral {
+  font-family: var(--mono); font-size: .74rem;
+  padding: .28rem .45rem; border-radius: 5px; margin-top: .35rem;
+  display: block;
+}
+.coach-body .neutral { background: var(--surface-2); border: 1px solid var(--border); }
+.coach-body .played { background: rgba(239,68,68,.08);  border: 1px solid rgba(239,68,68,.22); }
+.coach-body .better { background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.25); }
+.coach-body .lead { color: var(--subtle); margin: .5rem 0 0; }
+
+.coach-warn {
+  border-left: 3px solid var(--danger);
+  background: rgba(239,68,68,.09);
+  padding: .55rem .7rem; border-radius: 0 7px 7px 0;
+  font-size: .82rem; margin-bottom: .6rem;
+}
+.coach-warn.mild { border-left-color: var(--warning); background: rgba(251,191,36,.08); }
+.coach-warn .h {
+  display: block; font-size: .64rem; text-transform: uppercase;
+  letter-spacing: .12em; color: var(--muted); margin-bottom: .2rem;
+}
+
+.drill-tick { color: var(--success); }
 
 /* ---- learn ----------------------------------------------------- */
 

@@ -8,6 +8,7 @@
   'use strict';
 
   var E = window.Engine, AI = window.AI, Board = window.Board, C = window.Content;
+  var Coach = window.Coach, Store = window.Store;
   var $ = function (id) { return document.getElementById(id); };
 
   /* ================================================================ */
@@ -56,7 +57,7 @@
     C.LESSONS.forEach(function (l, i) {
       var b = document.createElement('button');
       b.innerHTML = '<span class="n">' + String(i + 1).padStart(2, '0') + '</span><span>' + l.title + '</span>';
-      b.addEventListener('click', function () { lessonIdx = i; renderLesson(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+      b.addEventListener('click', function () { lessonIdx = i; renderLesson(); saveProgress(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
       toc.appendChild(b);
     });
   }
@@ -98,8 +99,8 @@
     });
 
     var prev = $('lesson-prev'), next = $('lesson-next');
-    if (prev) prev.addEventListener('click', function () { if (lessonIdx > 0) { lessonIdx--; renderLesson(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
-    if (next) next.addEventListener('click', function () { if (lessonIdx < C.LESSONS.length - 1) { lessonIdx++; renderLesson(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+    if (prev) prev.addEventListener('click', function () { if (lessonIdx > 0) { lessonIdx--; renderLesson(); saveProgress(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+    if (next) next.addEventListener('click', function () { if (lessonIdx < C.LESSONS.length - 1) { lessonIdx++; renderLesson(); saveProgress(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
   }
 
   /* ================================================================ */
@@ -136,10 +137,11 @@
 
   var G = {
     state: null,
-    turnStart: null,   // snapshot for undo, taken when the roll is made
+    turnStart: null,   // state as it stood right after the roll
     undoStack: [],
     selected: null,
     hint: null,
+    review: null,      // last Coach.reviewTurn result
     log: [],
     score: { W: 0, B: 0 },
     busy: false,
@@ -152,15 +154,18 @@
 
   function newGame() {
     G.state = E.newGame(opts());
+    G.turnStart = null;
     G.undoStack = [];
     G.selected = null;
     G.hint = null;
+    G.review = null;
     G.over = false;
     G.busy = false;
     G.log = [];
     flash('');
     logLine('W', 'New game. You are purple and run 24 → 1.');
     renderPlay();
+    save();
   }
 
   function flash(msg, kind) {
@@ -199,11 +204,21 @@
     var sources = [], seen = {};
     legal.forEach(function (m) { if (!seen[m.from]) { seen[m.from] = 1; sources.push(m.from); } });
 
+    var coaching = $('opt-coach').checked;
     var targets = [], offTarget = false;
     if (G.selected != null) {
       legal.filter(function (m) { return m.from === G.selected; }).forEach(function (m) {
-        if (m.off) offTarget = true;
-        else targets.push({ to: m.to, pin: E.topRun(s.points, m.to).color === E.B && E.topRun(s.points, m.to).len === 1 });
+        if (m.off) { offTarget = true; return; }
+        var run = E.topRun(s.points, m.to);
+        /* Ask the coach what each destination would cost, so the warning
+           is on the board before the move rather than after it. */
+        var risk = coaching ? Coach.moveRisk(s, m) : null;
+        targets.push({
+          to: m.to,
+          pin: run.color === E.B && run.len === 1,
+          risk: risk ? risk.level : null,
+          title: risk ? risk.text : null
+        });
       });
     }
 
@@ -217,6 +232,8 @@
       hint: G.hint,
       onPoint: onPoint
     });
+
+    renderCoach(targets);
 
     /* dice */
     var dice = $('dice');
@@ -239,7 +256,7 @@
     /* controls */
     var rolled = s.roll.length > 0;
     $('btn-roll').disabled = !myTurn || rolled || G.over;
-    $('btn-undo').disabled = !myTurn || !s.played.length;
+    $('btn-undo').disabled = !myTurn || !G.undoStack.length;
     $('btn-done').disabled = !myTurn || !rolled || E.legalNow(s).length > 0;
     $('btn-hint').disabled = !myTurn || !rolled || !E.legalNow(s).length;
     $('btn-done').classList.toggle('btn-primary', !$('btn-done').disabled);
@@ -253,6 +270,56 @@
       d.innerHTML = l.text;
       log.appendChild(d);
     });
+  }
+
+  /* The Coach card shows a live warning while a move is pending, and the
+     review of the last completed turn otherwise. */
+  function renderCoach(targets) {
+    var body = $('coach-body');
+    if (!$('opt-coach').checked) {
+      body.className = 'coach-empty';
+      body.textContent = 'Coach is off.';
+      return;
+    }
+
+    var pending = (targets || []).filter(function (t) { return t.risk; });
+    if (pending.length) {
+      var worst = pending.filter(function (t) { return t.risk === 'mana'; })[0] || pending[0];
+      body.className = '';
+      body.innerHTML = '<div class="coach-warn' + (worst.risk === 'mana' ? '' : ' mild') + '">' +
+        '<span class="h">' + (worst.risk === 'mana' ? 'Mana warning' : 'Leaves a blot') + '</span>' +
+        worst.title + '</div>';
+      return;
+    }
+
+    var r = G.review;
+    if (!r) {
+      body.className = 'coach-empty';
+      body.textContent = "Finish a turn and I'll review it.";
+      return;
+    }
+
+    body.className = 'coach-body';
+    var badge = '<span class="badge ' + r.grade.tone + '">' + r.grade.label + '</span>';
+    var cost = r.same ? '' : '<span class="cost">cost ' + r.loss.toFixed(1) + '</span>';
+    var html = '<div class="coach-verdict">' + badge + cost + '</div>';
+    if (r.same) {
+      html += 'You played <span class="better">' + r.playedLine + '</span>' +
+              '<p class="lead">That was the best line available' +
+              (r.alternatives > 1 ? ' out of ' + r.alternatives + ' legal ways to play the roll' : '') +
+              '.</p>';
+    } else if (!Coach.isMistake(r.grade)) {
+      /* A fraction of a pip apart. Show the alternative, but do not dress
+         it up as a correction. */
+      html += 'You played <span class="neutral">' + r.playedLine + '</span>' +
+              '<p class="lead">Sound. The engine marginally prefers <strong>' + r.bestLine +
+              '</strong>, but there is next to nothing in it.</p>';
+    } else {
+      html += 'You played <span class="played">' + r.playedLine + '</span>' +
+              'Better was <span class="better">' + r.bestLine + '</span>' +
+              '<p class="lead">Because ' + r.why + '.</p>';
+    }
+    body.innerHTML = html;
   }
 
   function onPoint(n) {
@@ -296,12 +363,21 @@
       note += ' <span class="tag">— MANA</span>';
     logLine(E.W, note);
 
+    /* The turn is only worth reviewing once it is actually finished —
+       a half-played turn has no meaningful cost yet. */
+    if (E.legalNow(s).length === 0) reviewTurn();
+
     if (checkOver()) return;
     renderPlay();
+    save();
+  }
 
-    if (E.legalNow(s).length === 0) {
-      /* nothing left to play; nudge but let the player undo if they want */
-      renderPlay();
+  function reviewTurn() {
+    if (!$('opt-coach').checked || !G.turnStart || !G.state.played.length) { G.review = null; return; }
+    G.review = Coach.reviewTurn(G.turnStart, G.state.played);
+    if (G.review && !G.review.same && Coach.isMistake(G.review.grade)) {
+      logLine(E.W, '<span class="tag">' + G.review.grade.label + '</span> — better was ' +
+                   G.review.bestLine);
     }
   }
 
@@ -310,9 +386,11 @@
     G.state = G.undoStack.pop();
     G.selected = null;
     G.hint = null;
+    G.review = null;         // the turn is unfinished again
     /* drop the log line for the move we just took back */
     if (G.log.length) G.log.shift();
     renderPlay();
+    save();
   }
 
   function rollForPlayer() {
@@ -320,11 +398,14 @@
     if (s.roll.length) return;
     var d = E.rollDice();
     E.setRoll(s, d[0], d[1]);
+    G.turnStart = E.clone(s);      // for the coach and for mid-turn saves
     G.undoStack = [];
     G.selected = null;
     G.hint = null;
+    G.review = null;
     flash('');
     logLine(E.W, '<strong>Roll ' + d[0] + '-' + d[1] + '</strong>' + (d[0] === d[1] ? ' (double)' : ''));
+    save();
 
     if (E.legalNow(s).length === 0) {
       /* Could be an ordinary forfeit, or a position where neither side
@@ -341,10 +422,12 @@
   function endPlayerTurn() {
     if (G.over) return;
     E.endTurn(G.state);
+    G.turnStart = null;
     G.undoStack = [];
     G.selected = null;
     G.hint = null;
     renderPlay();
+    save();
     setTimeout(aiTurn, 500);
   }
 
@@ -379,9 +462,11 @@
         if (checkOver()) return;
         E.endTurn(s);
         renderPlay();
+        save();
         return;
       }
-      var mv = plan[i++];
+      var mv = plan[i];
+      i++;
       var r = E.apply(s, mv);
       var note = moveLabel(mv);
       if (r.pinned) note += ' <span class="tag">— pinned you!</span>';
@@ -434,22 +519,107 @@
     renderPlay();
   }
 
+  /* ---------------------------------------------------------------- */
+  /* Persistence                                                       */
+
+  function settings() {
+    return {
+      difficulty: $('difficulty').value,
+      hints: $('opt-hints').checked,
+      coach: $('opt-coach').checked,
+      mana: $('opt-mana').checked
+    };
+  }
+
+  function save() {
+    if (!Store.available || !G.state) return;
+    Store.patch({
+      game: Store.serialiseGame(G.state, G.turnStart),
+      score: G.score,
+      over: G.over,
+      log: G.log.slice(0, 60),
+      settings: settings()
+    });
+  }
+
+  function loadSettings() {
+    var s = Store.get('settings', null);
+    if (!s) return;
+    if (s.difficulty) $('difficulty').value = s.difficulty;
+    $('opt-hints').checked = s.hints !== false;
+    $('opt-coach').checked = s.coach !== false;
+    $('opt-mana').checked = !!s.mana;
+  }
+
+  function restoreGame() {
+    var blob = Store.get('game', null);
+    if (!blob) return false;
+    var r = Store.deserialiseGame(blob);
+    if (!r) return false;
+
+    G.state = r.state;
+    G.turnStart = r.turnStart;
+    G.state.opts.manaEndsGame = $('opt-mana').checked;
+
+    /* Rebuild the undo history by walking the turn again, so Undo still
+       works after a refresh instead of being a button that does nothing. */
+    G.undoStack = [];
+    if (r.turnStart && r.state.played.length) {
+      var walk = E.clone(r.turnStart);
+      r.state.played.forEach(function (m) {
+        G.undoStack.push(E.clone(walk));
+        E.apply(walk, m);
+      });
+    }
+    G.selected = null;
+    G.hint = null;
+    G.review = null;
+    G.busy = false;
+    G.score = Store.get('score', { W: 0, B: 0 });
+    G.log = Store.get('log', []);
+
+    /* The score was already banked when the game ended, so restore the
+       over-flag without running it through checkOver again. */
+    var res = E.result(G.state);
+    G.over = !!res;
+    if (res) {
+      flash(res.reason === 'deadlock'
+        ? 'This game ended in a dead position — a draw. Start a new game when you are ready.'
+        : '<strong>' + (res.winner === E.W ? 'You won' : 'Opponent won') + '</strong> this game. ' +
+          'Match score ' + G.score.W + ' – ' + G.score.B + '. Start a new game when you are ready.',
+        res.winner === E.W ? 'success' : 'info');
+    }
+    return true;
+  }
+
   $('btn-roll').addEventListener('click', rollForPlayer);
   $('btn-undo').addEventListener('click', undo);
   $('btn-done').addEventListener('click', endPlayerTurn);
   $('btn-hint').addEventListener('click', showHint);
   $('btn-new').addEventListener('click', newGame);
-  $('opt-hints').addEventListener('change', renderPlay);
+  $('opt-hints').addEventListener('change', function () { renderPlay(); save(); });
+  $('opt-coach').addEventListener('change', function () {
+    if (!$('opt-coach').checked) G.review = null;
+    else if (G.state && E.legalNow(G.state).length === 0) reviewTurn();
+    renderPlay();
+    save();
+  });
   $('opt-mana').addEventListener('change', function () {
     if (G.state) G.state.opts.manaEndsGame = $('opt-mana').checked;
+    save();
   });
-  $('difficulty').addEventListener('change', function () { this.blur(); });
+  $('difficulty').addEventListener('change', function () { this.blur(); save(); });
 
   /* ================================================================ */
   /* Drills                                                           */
   /* ================================================================ */
 
-  var D = { idx: 0, state: null, selected: null, revealed: false };
+  var D = { idx: 0, state: null, selected: null, revealed: false, solved: {} };
+
+  function saveProgress() {
+    if (!Store.available) return;
+    Store.patch({ progress: { lessonIdx: lessonIdx, drillIdx: D.idx, solved: D.solved } });
+  }
 
   function loadDrill() {
     var d = C.DRILLS[D.idx];
@@ -465,8 +635,11 @@
     var d = C.DRILLS[D.idx], s = D.state;
     if (!s) return;
 
-    $('drill-progress').textContent = 'Drill ' + (D.idx + 1) + ' of ' + C.DRILLS.length;
-    $('drill-head').innerHTML = '<strong>' + d.title + '</strong>';
+    var done = Object.keys(D.solved).length;
+    $('drill-progress').innerHTML = 'Drill ' + (D.idx + 1) + ' of ' + C.DRILLS.length +
+      (done ? ' · <span class="drill-tick">' + done + ' solved</span>' : '');
+    $('drill-head').innerHTML = '<strong>' + d.title + '</strong>' +
+      (D.solved[D.idx] ? ' <span class="drill-tick">✓</span>' : '');
     var faces = document.createElement('div');
     faces.className = 'dice';
     diceFaces(s).forEach(function (f) { faces.appendChild(Board.die(f.v, f.spent)); });
@@ -530,10 +703,12 @@
     if (ok && d.avoid) {
       ok = !s.played.some(function (m) { return d.avoid.indexOf(m.from) >= 0; });
     }
+    if (ok) { D.solved[D.idx] = true; saveProgress(); }
     $('drill-verdict').innerHTML = ok
       ? '<div class="flash success"><strong>Correct.</strong> ' + d.why + '</div>'
       : '<div class="flash error"><strong>Not quite.</strong> You played ' +
         s.played.map(moveLabel).join(', ') + '. Try again, or reveal the answer.</div>';
+    renderDrill();
   }
 
   $('drill-reset').addEventListener('click', loadDrill);
@@ -542,18 +717,40 @@
     var d = C.DRILLS[D.idx];
     $('drill-verdict').innerHTML = '<div class="flash info"><strong>' + d.model + '</strong><br>' + d.why + '</div>';
   });
-  $('drill-prev').addEventListener('click', function () { if (D.idx > 0) { D.idx--; loadDrill(); } });
-  $('drill-next').addEventListener('click', function () { if (D.idx < C.DRILLS.length - 1) { D.idx++; loadDrill(); } });
+  $('drill-prev').addEventListener('click', function () { if (D.idx > 0) { D.idx--; loadDrill(); saveProgress(); } });
+  $('drill-next').addEventListener('click', function () { if (D.idx < C.DRILLS.length - 1) { D.idx++; loadDrill(); saveProgress(); } });
 
   /* ================================================================ */
   /* Boot                                                             */
   /* ================================================================ */
 
+  loadSettings();
+
+  var progress = Store.get('progress', null);
+  if (progress) {
+    if (typeof progress.lessonIdx === 'number')
+      lessonIdx = Math.min(Math.max(0, progress.lessonIdx), C.LESSONS.length - 1);
+    if (typeof progress.drillIdx === 'number')
+      D.idx = Math.min(Math.max(0, progress.drillIdx), C.DRILLS.length - 1);
+    if (progress.solved && typeof progress.solved === 'object') D.solved = progress.solved;
+  }
+
   buildToc();
   renderGlossary();
-  newGame();
+
+  var resumed = restoreGame();
+  if (!resumed) newGame();
   loadDrill();
 
   var start = location.hash.slice(1);
   show(['learn', 'play', 'drills', 'glossary'].indexOf(start) >= 0 ? start : 'learn');
+
+  /* A game saved mid-AI-turn resumes with the opponent still on move. */
+  if (resumed && !G.over && G.state.turn === E.B) setTimeout(aiTurn, 600);
+
+  /* Belt and braces for phones, where the tab is often killed rather
+     than closed. */
+  window.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') { save(); saveProgress(); }
+  });
 })();

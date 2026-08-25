@@ -24,7 +24,15 @@
     homePoint:  4,     // made points in our own home board
     anchorPoint: 2,    // made points anywhere
     borneOff:  10,
-    stackTax:   0.6    // discourage burying 6+ checkers on one point
+    stackTax:   0.6,   // discourage burying 6+ checkers on one point
+
+    /* Own starting point. In backgammon an anchor in the opponent's home
+       is an asset; in Mahbooseh it is a liability, because you cannot be
+       hit there — only pinned — and you must eventually break it. Being
+       down to exactly two is standing on the edge of the mana cliff. */
+    startTax:    1.5,  // per checker still on our starting point
+    startPair:  10,    // extra for being one move from leaving a blot
+    manaBlot:  450     // scaled by the chance it actually gets pinned
   };
 
   /* Score a position from `p`'s point of view. Higher is better. */
@@ -57,6 +65,36 @@
       var shots = E.directShots(pts, o, bl[i]);
       if (!shots) continue;
       s -= shots * WEIGHTS.blot * (1 + E.pipOf(p, bl[i]) / 24);
+    }
+
+    /* The mother checker. Leaving exactly one exposed on our own starting
+       point is not an ordinary blot — the downside is the whole game, so
+       it is priced as the chance of being pinned times what the mana is
+       worth, not with the generic blot weight. */
+    var sp = E.startPoint(p), onStart = 0;
+    for (i = 0; i < pts[sp].length; i++) if (pts[sp][i] === p) onStart++;
+    if (onStart > 0) {
+      s -= onStart * WEIGHTS.startTax;
+      var spRun = E.topRun(pts, sp);
+      if (onStart === 1 && spRun.color === p && spRun.len === 1) {
+        /* Danger is not just "can they hit it this turn". Our starting
+           point is the LAST point the opponent travels to, so every
+           checker of theirs still short of it is a future shot. Pricing
+           only the immediate shots would happily strand the mother
+           checker early, while the opponent is still out of range. */
+        var behind = 0;
+        for (i = 1; i <= 24; i++) {
+          if (E.pipOf(o, i) <= E.pipOf(o, sp)) continue;
+          for (var j = 0; j < pts[i].length; j++) if (pts[i][j] === o) behind++;
+        }
+        if (behind > 0) {
+          var k = E.directShots(pts, o, sp);
+          var risk = k > 0 ? (1 - Math.pow((6 - k) / 6, 2)) : 0.35;
+          s -= risk * WEIGHTS.manaBlot;
+        }
+      } else if (onStart === 2) {
+        s -= WEIGHTS.startPair;
+      }
     }
 
     for (i = 1; i <= 24; i++) {
