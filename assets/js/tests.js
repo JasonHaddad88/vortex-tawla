@@ -208,6 +208,61 @@
   eq('opponent got one off: single game', E.result(single).points, 1);
 
   /* ---------------------------------------------------------------- */
+  describe('Hints mid-turn');
+
+  /* Regression: hints used to read whole-turn plans fixed at roll time,
+     so after playing part of a turn they re-suggested a move already
+     made and scored plans against a board those moves had already left. */
+  (function () {
+    var s = E.fromSpec({ 24: 'WWWWWWWWWWWWWWW', 1: 'BBBBBBBBBBBBBBB' }, 'W', {});
+    E.setRoll(s, 1, 1);                       // doubles: four moves to make
+    var h1 = window.AI.hint(s);
+    ok('a hint is offered at the start of the turn', !!h1);
+    eq('it suggests four moves', h1.plan.length, 4);
+
+    E.apply(s, h1.next);                      // play the suggested move
+    var h2 = window.AI.hint(s);
+    ok('a hint is still offered after one move', !!h2);
+    eq('and it now covers only the three remaining', h2.plan.length, 3);
+    ok('it does not re-suggest the move just played',
+       !(h2.next.from === h1.next.from && h2.next.to === h1.next.to && s.played.length === 1 &&
+         h2.plan.length === h1.plan.length));
+
+    /* every suggested move must be legal right now */
+    var legal = E.legalNow(s);
+    ok('the suggestion is a legal move in the current position',
+       legal.some(function (m) { return E.sameMove(m, h2.next); }),
+       'suggested ' + JSON.stringify(h2.next));
+
+    E.apply(s, h2.next);
+    E.apply(s, window.AI.hint(s).next);
+    var h4 = window.AI.hint(s);
+    eq('one move left on the last hint', h4.plan.length, 1);
+    ok('still legal', E.legalNow(s).some(function (m) { return E.sameMove(m, h4.next); }));
+    E.apply(s, h4.next);
+    eq('turn is complete after playing the whole hinted line', E.legalNow(s).length, 0);
+    ok('and no hint is offered with nothing left to play', window.AI.hint(s) === null);
+  })();
+
+  /* Remaining plans must always match what the engine will accept. */
+  (function () {
+    var s = E.newGame();
+    E.setRoll(s, 6, 3);
+    var steps = 0;
+    while (E.legalNow(s).length && steps < 5) {
+      var rp = window.AI.remainingPlans(s);
+      var legal = E.legalNow(s);
+      ok('remaining plans start with a legal move (step ' + steps + ')',
+         rp.every(function (pl) {
+           return legal.some(function (m) { return E.sameMove(m, pl[0]); });
+         }));
+      E.apply(s, legal[0]);
+      steps++;
+    }
+    ok('walked the turn to completion', steps > 0);
+  })();
+
+  /* ---------------------------------------------------------------- */
   describe('Lesson diagrams');
 
   C.LESSONS.forEach(function (l, i) {

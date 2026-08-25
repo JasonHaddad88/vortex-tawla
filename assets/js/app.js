@@ -285,6 +285,9 @@
     var r = E.apply(s, mv);
     G.selected = null;
     G.hint = null;
+    /* The old hint described the position we just left; leaving it on
+       screen reads as a hint that failed to update. */
+    flash('');
 
     var note = moveLabel(mv);
     if (r.pinned) note += ' <span class="tag">— pin!</span>';
@@ -320,6 +323,7 @@
     G.undoStack = [];
     G.selected = null;
     G.hint = null;
+    flash('');
     logLine(E.W, '<strong>Roll ' + d[0] + '-' + d[1] + '</strong>' + (d[0] === d[1] ? ' (double)' : ''));
 
     if (E.legalNow(s).length === 0) {
@@ -423,9 +427,10 @@
   function showHint() {
     var h = AI.hint(G.state);
     if (!h) return;
-    G.hint = { from: h.plan[0].from, to: h.plan[0].off ? null : h.plan[0].to };
+    G.hint = { from: h.next.from, to: h.next.off ? null : h.next.to };
     G.selected = null;
-    flash('Try <strong>' + moveLabel(h.plan[0]) + '</strong> — ' + h.why + '.', 'info');
+    var rest = h.plan.length > 1 ? ' Full line: <strong>' + h.line + '</strong>.' : '';
+    flash('Try <strong>' + moveLabel(h.next) + '</strong> — ' + h.why + '.' + rest, 'info');
     renderPlay();
   }
 

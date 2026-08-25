@@ -77,10 +77,30 @@
     return evaluate(pts, off, state.turn);
   }
 
+  /* The moves still to come this turn.
+   *
+   * state.plans holds WHOLE-turn sequences fixed at roll time, so once
+   * the player has played part of the turn those plans no longer line up
+   * with the board. Scoring them against the current position would
+   * re-apply moves already made; returning plan[0] would re-suggest a
+   * move already played. Both are fixed by trimming each still-viable
+   * plan by what has been played. When nothing has been played yet this
+   * is exactly state.plans, so the AI's own turn is unaffected. */
+  function remainingPlans(state) {
+    var n = state.played.length, seen = {}, out = [];
+    E.matchingPlans(state).forEach(function (pl) {
+      var rest = pl.slice(n);
+      if (!rest.length) return;
+      var k = rest.map(function (m) { return m.from + '>' + m.to + ':' + m.die; }).join('|');
+      if (!seen[k]) { seen[k] = 1; out.push(rest); }
+    });
+    return out;
+  }
+
   /* level: 'easy' | 'normal' | 'hard' */
   function choosePlan(state, level) {
-    var plans = state.plans;
-    if (!plans.length || !plans[0].length) return [];
+    var plans = remainingPlans(state);
+    if (!plans.length) return [];
     if (level === 'easy') return plans[Math.floor(Math.random() * plans.length)];
 
     var noise = level === 'hard' ? 0 : 9;
@@ -118,8 +138,19 @@
     else if (blotsAfter.length === 0) why.push('it leaves nothing exposed');
     if (!why.length) why.push('it makes the most ground safely');
 
-    return { plan: plan, why: why.join(', and ') };
+    /* plan[0] is the next move to make; the rest is the line it belongs
+       to, which is worth showing because the payoff is often on move 2. */
+    var label = function (m) { return m.from + '→' + (m.off ? 'off' : m.to); };
+    return {
+      plan: plan,
+      next: plan[0],
+      line: plan.map(label).join(', then '),
+      why: why.join(', and ')
+    };
   }
 
-  root.AI = { evaluate: evaluate, scorePlan: scorePlan, choosePlan: choosePlan, hint: hint, WEIGHTS: WEIGHTS };
+  root.AI = {
+    evaluate: evaluate, scorePlan: scorePlan, remainingPlans: remainingPlans,
+    choosePlan: choosePlan, hint: hint, WEIGHTS: WEIGHTS
+  };
 })(typeof window !== 'undefined' ? window : globalThis);
