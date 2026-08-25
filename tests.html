@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vortex Tawla — engine tests</title>
+<link rel="stylesheet" href="assets/css/vortex.css">
+<style>
+  main { max-width: 860px; }
+  .t { font-family: var(--mono); font-size: .78rem; padding: .18rem 0; color: var(--subtle); }
+  .t .mark { display: inline-block; width: 1.4rem; }
+  .t.p .mark { color: var(--success); }
+  .t.f { color: var(--danger); }
+  .t.f .mark { color: var(--danger); }
+  .t .detail { color: var(--warning); }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo"></div>
+    <h1>VORTEX <span class="accent">TAWLA</span> — TESTS</h1>
+  </div>
+  <nav><a class="btn btn-small" href="index.html">Back to app</a></nav>
+</header>
+<main>
+  <div class="section-head"><h2>Engine self-tests</h2></div>
+  <div class="card" id="out">Running…</div>
+</main>
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/ai.js"></script>
+<script src="assets/js/content.js"></script>
+<script src="assets/js/tests.js"></script>
+</body>
+</html>

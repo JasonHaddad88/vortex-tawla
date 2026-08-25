@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vortex Tawla — Mahbooseh</title>
+<meta name="description" content="Learn Tawleh: an interactive Mahbooseh trainer with rules, drills and a playable board.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23a855f7'/%3E%3Cstop offset='1' stop-color='%2367e8f9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='8' fill='url(%23g)'/%3E%3Crect x='5' y='5' width='22' height='22' rx='4' fill='%2306060a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/css/vortex.css">
+<link rel="stylesheet" href="assets/css/tawla.css">
+</head>
+<body>
+
+<header class="topbar" id="topbar">
+  <div class="brand">
+    <div class="logo"></div>
+    <h1>VORTEX <span class="accent">TAWLA</span></h1>
+  </div>
+  <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
+    <span></span><span></span><span></span>
+  </button>
+  <nav id="nav">
+    <button class="navlink active" data-view="learn">Learn</button>
+    <button class="navlink" data-view="play">Play</button>
+    <button class="navlink" data-view="drills">Drills</button>
+    <button class="navlink" data-view="glossary">Glossary</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- ============================ LEARN ============================ -->
+  <section class="view active" id="view-learn">
+    <div class="section-head">
+      <h2>Mahbooseh — المحبوسة</h2>
+      <span class="muted" style="font-size:.78rem" id="lesson-progress"></span>
+    </div>
+    <div class="learn-grid">
+      <div class="toc" id="toc"></div>
+      <div class="card lesson" id="lesson"></div>
+    </div>
+  </section>
+
+  <!-- ============================= PLAY ============================ -->
+  <section class="view" id="view-play">
+    <div class="section-head">
+      <h2>Play Mahbooseh</h2>
+      <div class="row">
+        <label class="field" style="flex-direction:row;align-items:center;gap:.4rem">
+          Opponent
+          <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="normal" selected>Normal</option>
+            <option value="hard">Hard</option>
+          </select>
+        </label>
+        <label class="field" style="flex-direction:row;align-items:center;gap:.4rem">
+          <input type="checkbox" id="opt-hints" checked style="width:auto"> Hints
+        </label>
+        <label class="field" style="flex-direction:row;align-items:center;gap:.4rem">
+          <input type="checkbox" id="opt-mana" style="width:auto"> Mana ends game
+        </label>
+      </div>
+    </div>
+
+    <div id="play-flash"></div>
+
+    <div class="play-grid">
+      <div>
+        <div class="hud">
+          <div class="who w" id="who-w"><span class="dot"></span>You <span class="pips" id="pip-w"></span></div>
+          <div class="who b" id="who-b"><span class="dot"></span>Opponent <span class="pips" id="pip-b"></span></div>
+          <div class="spacer"></div>
+          <div class="dice" id="dice"></div>
+        </div>
+
+        <div class="board-wrap"><div id="board"></div></div>
+
+        <div class="controls">
+          <button class="btn btn-primary" id="btn-roll">Roll</button>
+          <button class="btn" id="btn-undo">Undo move</button>
+          <button class="btn" id="btn-done">End turn</button>
+          <button class="btn" id="btn-hint">Hint</button>
+          <div class="spacer"></div>
+          <button class="btn btn-danger" id="btn-new">New game</button>
+        </div>
+      </div>
+
+      <aside class="side">
+        <div class="card">
+          <div class="label" style="margin-bottom:.5rem">Position</div>
+          <div class="stat-row"><span class="k">Your pip count</span><span class="v" id="s-pip-w">—</span></div>
+          <div class="stat-row"><span class="k">Opponent pip</span><span class="v" id="s-pip-b">—</span></div>
+          <div class="stat-row"><span class="k">Borne off</span><span class="v" id="s-off">0 – 0</span></div>
+          <div class="stat-row"><span class="k">You have pinned</span><span class="v" id="s-pins-w">0</span></div>
+          <div class="stat-row"><span class="k">You are pinned</span><span class="v" id="s-pins-b">0</span></div>
+          <div class="stat-row"><span class="k">Match score</span><span class="v" id="s-score">0 – 0</span></div>
+        </div>
+
+        <div class="card">
+          <div class="label" style="margin-bottom:.5rem">Move log</div>
+          <div class="log" id="log"></div>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ============================ DRILLS =========================== -->
+  <section class="view" id="view-drills">
+    <div class="section-head">
+      <h2>Drills</h2>
+      <span class="muted" style="font-size:.78rem" id="drill-progress"></span>
+    </div>
+    <div class="card">
+      <div class="drill-head" id="drill-head"></div>
+      <p class="drill-q" id="drill-q"></p>
+      <div class="board-wrap"><div id="drill-board"></div></div>
+      <div class="controls">
+        <button class="btn" id="drill-reset">Reset position</button>
+        <button class="btn btn-primary" id="drill-check">Check my move</button>
+        <button class="btn" id="drill-reveal">Show answer</button>
+        <div class="spacer"></div>
+        <button class="btn" id="drill-prev">Previous</button>
+        <button class="btn" id="drill-next">Next</button>
+      </div>
+      <div class="verdict" id="drill-verdict"></div>
+    </div>
+  </section>
+
+  <!-- =========================== GLOSSARY ========================== -->
+  <section class="view" id="view-glossary">
+    <div class="section-head"><h2>Glossary</h2></div>
+    <div class="gloss" id="gloss"></div>
+
+    <div class="section-head" style="margin-top:2rem"><h2>Calling the dice</h2></div>
+    <div class="card">
+      <table class="dice-names" id="dice-table"></table>
+      <p class="muted" style="font-size:.78rem;margin:1rem 0 0">
+        The higher die is called first: 6-5 is <em>shesh-besh</em>. Doubles usually take a
+        <em>dou-</em> prefix. Calls vary between cities and tables.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<script src="assets/js/engine.js"></script>
+<script src="assets/js/ai.js"></script>
+<script src="assets/js/board.js"></script>
+<script src="assets/js/content.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
