@@ -433,6 +433,32 @@
   .hud .who { padding: .3rem .55rem; font-size: .66rem; }
 }
 
+/* ---- update toast ---------------------------------------------- */
+
+.sw-toast {
+  position: fixed; left: 50%; bottom: 1.1rem;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex; align-items: center; gap: .7rem;
+  padding: .6rem .9rem;
+  background: rgba(14, 14, 24, .95);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.6), 0 0 22px var(--purple-glow);
+  font-size: .8rem;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  max-width: calc(100vw - 2rem);
+}
+.sw-toast[hidden] { display: none; }
+
+/* Standalone (installed) gets a little breathing room for the notch and
+   the home indicator. */
+@media (display-mode: standalone) {
+  .topbar { padding-top: max(1rem, env(safe-area-inset-top)); }
+  main { padding-bottom: max(2rem, env(safe-area-inset-bottom)); }
+}
+
 /* ---- misc ------------------------------------------------------ */
 
 .muted { color: var(--muted); }

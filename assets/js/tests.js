@@ -533,21 +533,116 @@
   /* ---------------------------------------------------------------- */
   /* Report                                                            */
 
-  var pass = results.filter(function (r) { return r.pass; }).length;
-  var fail = results.length - pass;
-  var out = document.getElementById('out');
-  var html = '<div class="flash ' + (fail ? 'error' : 'success') + '"><strong>' +
-             pass + ' passed, ' + fail + ' failed</strong> of ' + results.length + ' assertions.</div>';
-  var lastGroup = null;
-  results.forEach(function (r) {
-    if (r.group !== lastGroup) {
-      lastGroup = r.group;
-      html += '<div class="label" style="margin:1.1rem 0 .4rem">' + r.group + '</div>';
-    }
-    html += '<div class="t ' + (r.pass ? 'p' : 'f') + '">' +
-            '<span class="mark">' + (r.pass ? '✓' : '✕') + '</span>' + r.name +
-            (r.detail ? '<span class="detail"> — ' + r.detail + '</span>' : '') + '</div>';
-  });
-  out.innerHTML = html;
-  window.__tests = { pass: pass, fail: fail, results: results };
+  function report(pending) {
+    var pass = results.filter(function (r) { return r.pass; }).length;
+    var fail = results.length - pass;
+    var out = document.getElementById('out');
+    var html = '<div class="flash ' + (fail ? 'error' : 'success') + '"><strong>' +
+               pass + ' passed, ' + fail + ' failed</strong> of ' + results.length +
+               ' assertions.' + (pending ? ' <em>(offline checks still running…)</em>' : '') +
+               '</div>';
+    var lastGroup = null;
+    results.forEach(function (r) {
+      if (r.group !== lastGroup) {
+        lastGroup = r.group;
+        html += '<div class="label" style="margin:1.1rem 0 .4rem">' + r.group + '</div>';
+      }
+      html += '<div class="t ' + (r.pass ? 'p' : 'f') + '">' +
+              '<span class="mark">' + (r.pass ? '✓' : '✕') + '</span>' + r.name +
+              (r.detail ? '<span class="detail"> — ' + r.detail + '</span>' : '') + '</div>';
+    });
+    out.innerHTML = html;
+    window.__tests = { pass: pass, fail: fail, results: results, done: !pending };
+  }
+
+  report(true);
+
+  /* ------------------------------------------------------------------ */
+  /* Offline / PWA checks. These need the network, so they run after the
+     synchronous suite and refresh the report when they land.            */
+
+  function text(url) {
+    return fetch(url, { cache: 'no-store' }).then(function (r) {
+      if (!r.ok) throw new Error(url + ' → HTTP ' + r.status);
+      return r.text();
+    });
+  }
+
+  describe('PWA — manifest');
+
+  Promise.resolve()
+    .then(function () { return text('manifest.webmanifest'); })
+    .then(function (raw) {
+      var m = JSON.parse(raw);
+      ok('manifest is valid JSON', true);
+      ok('has a name', !!m.name);
+      ok('has a short_name that fits under an icon', !!m.short_name && m.short_name.length <= 12);
+      ok('has a start_url', !!m.start_url);
+      eq('display is standalone', m.display, 'standalone');
+      ok('background and theme colours are set', !!m.background_color && !!m.theme_color);
+
+      var sizes = (m.icons || []).map(function (i) { return i.sizes; });
+      ok('declares a 192px icon', sizes.indexOf('192x192') >= 0, sizes.join(' '));
+      ok('declares a 512px icon', sizes.indexOf('512x512') >= 0, sizes.join(' '));
+      ok('declares a maskable icon',
+         (m.icons || []).some(function (i) { return (i.purpose || '').indexOf('maskable') >= 0; }));
+
+      /* Every icon must actually exist and actually be a PNG. */
+      return Promise.all((m.icons || []).map(function (i) {
+        return fetch(i.src, { cache: 'no-store' }).then(function (r) {
+          ok('icon ' + i.src + ' is served', r.ok, r.ok ? '' : 'HTTP ' + r.status);
+          return r.ok ? r.arrayBuffer() : null;
+        }).then(function (buf) {
+          if (!buf) return;
+          var b = new Uint8Array(buf);
+          ok('icon ' + i.src + ' is a real PNG',
+             b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47);
+        });
+      }));
+    })
+    ['catch'](function (e) { ok('manifest loads', false, String(e)); })
+
+    /* ---------------------------------------------------------------- */
+    .then(function () {
+      describe('PWA — offline completeness');
+      return Promise.all([text('sw.js'), text('index.html')]);
+    })
+    .then(function (both) {
+      var sw = both[0], page = both[1];
+
+      var block = sw.match(/var\s+PRECACHE\s*=\s*\[([\s\S]*?)\]/);
+      ok('sw.js declares a PRECACHE list', !!block);
+      if (!block) return;
+      var precache = (block[1].match(/'[^']*'/g) || []).map(function (s) { return s.slice(1, -1); });
+      ok('PRECACHE is not empty', precache.length > 0);
+
+      var version = sw.match(/var\s+CACHE\s*=\s*'([^']+)'/);
+      ok('sw.js declares a versioned cache name', !!version, version && version[1]);
+
+      /* Everything index.html pulls in must be precached, or the app
+         breaks offline in exactly the way nobody tests for. */
+      var doc = new DOMParser().parseFromString(page, 'text/html');
+      var needed = [];
+      Array.prototype.forEach.call(doc.querySelectorAll('script[src]'), function (s) {
+        needed.push(s.getAttribute('src'));
+      });
+      Array.prototype.forEach.call(doc.querySelectorAll('link[rel="stylesheet"], link[rel="manifest"]'), function (l) {
+        needed.push(l.getAttribute('href'));
+      });
+
+      needed.forEach(function (u) {
+        ok('precached: ' + u, precache.indexOf(u) >= 0,
+           'index.html loads it but sw.js does not cache it');
+      });
+
+      /* And nothing in the list may 404 — a typo here silently breaks
+         the offline copy of one file only. */
+      return Promise.all(precache.map(function (u) {
+        return fetch(u, { cache: 'no-store' })
+          .then(function (r) { ok('PRECACHE entry resolves: ' + u, r.ok, r.ok ? '' : 'HTTP ' + r.status); })
+          ['catch'](function (e) { ok('PRECACHE entry resolves: ' + u, false, String(e)); });
+      }));
+    })
+    ['catch'](function (e) { ok('offline checks ran', false, String(e)); })
+    .then(function () { report(false); });
 })();

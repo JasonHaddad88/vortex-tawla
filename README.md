@@ -39,7 +39,12 @@ server for you.
 | `assets/js/board.js` | DOM board renderer |
 | `assets/js/content.js` | Lessons, glossary, drills |
 | `assets/js/app.js` | Routing, the play loop, drill grading |
-| `assets/js/tests.js` | 168 assertions over the engine, the coach and the content |
+| `assets/js/pwa.js` | Install prompt and service-worker registration |
+| `sw.js` | Offline cache |
+| `manifest.webmanifest` | Install metadata |
+| `tools/make_icons.py` | Regenerates the PNG icons from source |
+| `tools/test_sw.js` | 27 service-worker assertions, run under Node |
+| `assets/js/tests.js` | 214 assertions over the engine, coach, content and offline setup |
 
 ## How the engine models the board
 
@@ -96,6 +101,30 @@ happily strands the mother checker early, while the opponent is still out of ran
 `tests.js` asserts the evaluator's preferred line agrees with every drill's stated answer, so the
 app cannot tell a learner two different things.
 
+## Installing it
+
+Served over http(s) the app is a PWA: it installs to a home screen and works fully offline, which
+is the point — a backgammon trainer is most useful on a train. An Install button appears in the
+header once the browser reports it is installable, and a toast offers a reload when a new version
+has been fetched.
+
+None of that is load-bearing. Service workers are not permitted on `file://`, so registration is
+skipped there and the app behaves identically — which is also why it uses classic scripts rather
+than modules.
+
+Icons are generated, not committed by hand:
+
+```bash
+python tools/make_icons.py
+```
+
+That draws the Vortex mark and writes real PNGs using only the standard library (no Pillow), with
+edges antialiased from a rounded-rectangle distance field. Re-run it if the brand colours move.
+
+`sw.js` keeps a versioned cache: bump `CACHE` whenever a precached file changes, and the old cache
+is dropped on activate. Navigations are network-first so updates land immediately; everything else
+is cache-first with a background refresh, so it is fast offline and at most one load stale.
+
 ## Tests
 
 Open `tests.html`. It covers setup and direction of travel, landing and blocking rules, pinning,
@@ -108,7 +137,25 @@ Beyond the rules it covers the coach's grading and risk warnings, the evaluator/
 described above, hints staying correct mid-turn, and persistence round-trips — including that a
 corrupt or unreplayable save is rejected rather than loaded as a broken board.
 
-Current status: **168 passing, 0 failing.**
+It also checks the offline setup: the manifest is valid and every icon it names is a real PNG, and
+`sw.js`'s precache list covers every script and stylesheet `index.html` actually loads, with no
+entry that 404s. A file missing from that list only shows up as a broken app on a train, which is
+the worst possible time to find out.
+
+The service worker itself cannot run in a plain page, and some browsers refuse to register one at
+all — the embedded preview browser does. So its routing logic is driven directly under Node
+against a stubbed global scope:
+
+```bash
+node tools/test_sw.js
+```
+
+That covers precaching (including that a single 404 does not abort the whole install), stale-cache
+cleanup on activate, cross-origin and non-GET passthrough, network-first navigation with a shell
+fallback for deep links, cache-first assets with background revalidation, and that error responses
+are never cached as if they were the real file.
+
+Current status: **214 browser assertions and 27 service-worker assertions, 0 failing.**
 
 ## Adding the other games
 

@@ -1,0 +1,49 @@
+{
+  "name": "Vortex Tawla — Mahbooseh",
+  "short_name": "Tawla",
+  "description": "Learn Tawleh: an interactive Mahbooseh trainer with rules, drills, a coach and a playable board.",
+  "id": "/vortex-tawla/",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#06060a",
+  "theme_color": "#06060a",
+  "categories": ["games", "education"],
+  "lang": "en",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Play Mahbooseh",
+      "short_name": "Play",
+      "url": "index.html#play",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Drills",
+      "short_name": "Drills",
+      "url": "index.html#drills",
+      "icons": [{ "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
