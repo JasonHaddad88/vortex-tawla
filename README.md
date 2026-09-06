@@ -53,6 +53,7 @@ server for you.
 | `manifest.webmanifest` | Install metadata |
 | `tools/make_icons.py` | Regenerates the PNG icons from source |
 | `tools/test_sw.js` | 27 service-worker assertions, run under Node |
+| `tools/bench_ai.js` | Head-to-head AI strength test with duplicate dice |
 | `assets/js/tests.js` | 214 assertions over the engine, coach, content and offline setup |
 
 ## How the engine models the board
@@ -125,13 +126,48 @@ times *the pips the blot would lose*, since a hit checker restarts from 25.
 `tests.js` asserts the evaluator's preferred line agrees with every drill's stated answer, so the
 app cannot tell a learner two different things.
 
-**A caveat worth stating plainly.** The coach and the opponent are one-ply: they score the
-positions each legal way of playing the roll leads to, with hand-tuned weights, and pick the best.
-There is no lookahead. That is enough to catch real mistakes — it will always spot a missed mana or
-a blot left in range — but "best play" is a strong opinion, not a solved answer, and in quiet
-positions the difference between its top few lines is mostly noise. Searching a move deeper
-(averaging the opponent's best reply over all 21 dice combinations) is the obvious next
-improvement, and would raise the opponent and the coach together.
+**A caveat worth stating plainly.** The coach grades one-ply: it scores the position each legal way
+of playing the roll leads to, with hand-tuned weights, and picks the best. That is enough to catch
+real mistakes — it will always spot a missed mana or a blot left in range — but "best play" is a
+strong opinion, not a solved answer, and in quiet positions the gap between its top few lines is
+mostly noise.
+
+### Why the coach does not search deeper
+
+A two-ply search exists (`AI.searchPlan` / `AI.expectedScore`): for each candidate it plays the
+line out, then averages the opponent's best reply over all 21 rolls. It is more accurate about the
+*immediate* consequences of a move — it prices blot exposure properly instead of by heuristic —
+and it is deliberately **not** used for coaching, for two measured reasons.
+
+**It is not measurably stronger.** `tools/bench_ai.js` plays it head to head against the one-ply
+evaluator with duplicate dice — each seed played twice with the sides swapped, so most of the luck
+cancels between the halves — and reports a paired z-score. Over 40 pairs (80 Mahbooseh games) the
+two-ply search took 55% of games and 59 match points to 45, a mean of **+0.35 points per pair with
+a standard error of 0.28: z = 1.26, not significant**. An unpaired 120-game run before that landed
+at z ≈ 0.4. So: possibly a small edge, not a demonstrated one, in exchange for up to 800ms of
+thinking per move.
+
+Backgammon variance is brutal. Treat anything under a few hundred pairs as inconclusive and run it
+yourself before believing a claim in either direction:
+
+```bash
+node tools/bench_ai.js 200 mahbooseh
+```
+
+**And on Mahbooseh's most important decision it is worse.** Looking one reply ahead is blind past
+that reply, and this game's big decisions are long-horizon. On drill 2, keeping two checkers on your
+own starting point is perfectly safe for exactly one turn and disastrous three turns later, when you
+are forced to break it. Two-ply sees the safe turn, misses the disaster, and keeps the point —
+contradicting the drill. At one ply the evaluator's start-point term carries that knowledge as a
+heuristic and gets it right. The numbers, from the test suite:
+
+| line | one-ply | two-ply |
+| --- | --- | --- |
+| clear point 24 (`24→18, 24→19`) | **−73.9** | −92.0 |
+| keep it (`8→2, 6→1`) | −81.0 | **−88.8** |
+
+Both behaviours are pinned by tests, so neither can drift unnoticed. Getting past this needs a
+deeper search or a proper rollout, not another weight.
 
 ## Review
 
@@ -208,7 +244,12 @@ taken from, that it survives the JSON round-trip localStorage puts it through, t
 borne-off counts are preserved, and that the match statistics do not divide by zero on an empty
 history.
 
-Current status: **326 browser assertions and 27 service-worker assertions, 0 failing.**
+The two-ply search is covered as well: that the 21 rolls form a proper probability distribution,
+that an exhausted time budget degrades cleanly to the one-ply answer instead of returning a
+half-finished average, and — as a pinned, documented divergence — that one ply and two ply disagree
+about drill 2 in exactly the way described above.
+
+Current status: **354 browser assertions and 27 service-worker assertions, 0 failing.**
 
 ## Still to do: Gulbahar
 

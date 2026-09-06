@@ -99,19 +99,64 @@
     return why.join(', and ');
   }
 
+  function sameLine(a, b) {
+    if (a.length !== b.length) return false;
+    return a.map(label).sort().join() === b.map(label).sort().join();
+  }
+
+  /* Score the played line and the plausible alternatives at the SAME
+     depth, so the comparison is like for like. Returns null if the
+     deeper search could not finish in the time allowed, and the caller
+     falls back to the static verdict rather than mixing the two. */
+  function deepRank(start, played, width, budgetMs) {
+    var ranked = start.plans
+      .map(function (pl) { return { pl: pl, s: AI.scorePlan(start, pl) }; })
+      .sort(function (a, b) { return b.s - a.s; });
+
+    var top = ranked.slice(0, width).map(function (r) { return r.pl; });
+    /* The player's own line has to be in the comparison even when the
+       static ranking would not have shortlisted it. */
+    if (!top.some(function (pl) { return sameLine(pl, played); })) top.push(played);
+
+    var deadline = Date.now() + budgetMs;
+    var best = null, bestScore = -Infinity, playedScore = null;
+    for (var i = 0; i < top.length; i++) {
+      var ev = AI.expectedScore(start, top[i], deadline);
+      if (ev === null) return null;                 // ran out of time
+      if (sameLine(top[i], played)) playedScore = ev;
+      if (ev > bestScore) { bestScore = ev; best = top[i]; }
+    }
+    if (playedScore === null) return null;
+    return { best: best, bestScore: bestScore, playedScore: playedScore };
+  }
+
   /* `start` is the state as it stood immediately after the roll, with its
-     plans intact; `played` is what the player actually did. */
-  function reviewTurn(start, played) {
+     plans intact; `played` is what the player actually did.
+     opts.depth === 2 looks a move ahead, which is slower but much less
+     dependent on the hand-tuned weights being exactly right. */
+  function reviewTurn(start, played, opts) {
     if (!start || !start.plans.length || !played.length) return null;
 
-    var best = null, bestScore = -Infinity;
-    start.plans.forEach(function (pl) {
-      var sc = AI.scorePlan(start, pl);
-      if (sc > bestScore) { bestScore = sc; best = pl; }
-    });
+    var best = null, bestScore = -Infinity, playedScore = null, depth = 1;
+
+    if (opts && opts.depth === 2 && start.plans.length > 1) {
+      var deep = deepRank(start, played, opts.width || 6, opts.budgetMs || 800);
+      if (deep) {
+        best = deep.best; bestScore = deep.bestScore; playedScore = deep.playedScore;
+        depth = 2;
+      }
+    }
+
+    if (!best) {
+      start.plans.forEach(function (pl) {
+        var sc = AI.scorePlan(start, pl);
+        if (sc > bestScore) { bestScore = sc; best = pl; }
+      });
+      playedScore = AI.scorePlan(start, played);
+      depth = 1;
+    }
     if (!best) return null;
 
-    var playedScore = AI.scorePlan(start, played);
     var loss = Math.max(0, bestScore - playedScore);
     /* Different orderings of the same moves are the same play. */
     var same = loss < 0.5 ||
@@ -119,6 +164,7 @@
 
     return {
       loss: loss,
+      depth: depth,
       grade: same ? GRADES[0] : gradeFor(loss),
       same: same,
       best: best,

@@ -388,6 +388,9 @@
     body.className = 'coach-body';
     var badge = '<span class="badge ' + r.grade.tone + '">' + r.grade.label + '</span>';
     var cost = r.same ? '' : '<span class="cost">cost ' + r.loss.toFixed(1) + '</span>';
+    /* Only worth saying when it actually searched — the default is a
+       deliberate one-ply judgement, not a shortcut. */
+    if (r.depth === 2) cost += '<span class="cost">looked a move ahead</span>';
     var html = '<div class="coach-verdict">' + badge + cost + '</div>';
     if (r.same) {
       html += 'You played <span class="better">' + r.playedLine + '</span>' +
@@ -470,8 +473,13 @@
   function reviewTurn() {
     if (!G.turnStart || !G.state.played.length) { G.review = null; return; }
     /* Grade even with the coach panel switched off, so the review view
-       still has something to show afterwards. */
-    G.review = Coach.reviewTurn(G.turnStart, G.state.played);
+       still has something to show afterwards.
+       Deliberately depth 1. Searching the opponent's reply is more
+       accurate about the NEXT turn but blind past it, and in Mahbooseh
+       the decisions that matter most are long-horizon — see the note on
+       coaching depth in the README. At depth 2 the coach contradicts
+       drill 2, which is sound; at depth 1 it agrees with all five. */
+    G.review = Coach.reviewTurn(G.turnStart, G.state.played, { depth: 1 });
     if ($('opt-coach').checked && G.review && !G.review.same && Coach.isMistake(G.review.grade)) {
       logLine(G.state.turn, '<span class="tag">' + G.review.grade.label + '</span> — better was ' +
                             G.review.bestLine);
@@ -485,7 +493,7 @@
      ungraded because of the order the UI happened to do things in. */
   function recordTurn(review, grade) {
     if (!G.turnStart || !G.state.played.length) return;
-    if (grade && !review) review = Coach.reviewTurn(G.turnStart, G.state.played);
+    if (grade && !review) review = Coach.reviewTurn(G.turnStart, G.state.played, { depth: 1 });
     var entry = Review.record(G.turnStart, G.state.played, (grade && review) || null);
     if (entry) {
       G.history.push(entry);

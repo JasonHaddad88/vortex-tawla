@@ -164,11 +164,123 @@
     return out;
   }
 
+  /* ---------------------------------------------------------------- */
+  /* Two-ply search                                                    */
+  /* ---------------------------------------------------------------- */
+
+  /* The 21 distinct rolls and their probabilities. Doubles come up one
+     way in 36, everything else two. */
+  var ROLLS = (function () {
+    var out = [];
+    for (var a = 1; a <= 6; a++)
+      for (var b = a; b <= 6; b++)
+        out.push({ d: [a, b], p: a === b ? 1 / 36 : 2 / 36 });
+    return out;
+  })();
+
+  function applySeq(state, seq, mover) {
+    var v = E.variantOf(state);
+    var pts = E.clonePoints(state.points);
+    var off = { W: state.off.W, B: state.off.B };
+    var bar = { W: state.bar.W, B: state.bar.B };
+    for (var i = 0; i < seq.length; i++) E.applyOn(pts, off, mover, seq[i], v, bar);
+    return { pts: pts, off: off, bar: bar, v: v };
+  }
+
+  /* What this plan is really worth: the position it leads to, scored
+     AFTER the opponent has had their best reply, averaged over every
+     roll they might get.
+     A static score says "this position looks good". This says "this
+     position still looks good once they answer it", which is what
+     actually distinguishes a safe play from one that only looks safe. */
+  function expectedScore(state, plan, deadline) {
+    var me = state.turn, them = E.opp(me);
+    var a = applySeq(state, plan, me);
+    var v = a.v;
+
+    if (a.off[me] === 15) return 1e6;          // game already won
+
+    var total = 0;
+    for (var i = 0; i < ROLLS.length; i++) {
+      if (deadline && Date.now() > deadline) return null;   // caller falls back
+      var r = ROLLS[i];
+      var dice = r.d[0] === r.d[1] ? [r.d[0], r.d[0], r.d[0], r.d[0]] : [r.d[0], r.d[1]];
+      var replies = E.enumeratePlans(a.pts, them, dice, v, a.bar);
+
+      var bestReply = null, bestTheirs = -Infinity;
+      for (var j = 0; j < replies.length; j++) {
+        var pts = E.clonePoints(a.pts);
+        var off = { W: a.off.W, B: a.off.B };
+        var bar = { W: a.bar.W, B: a.bar.B };
+        for (var k = 0; k < replies[j].length; k++)
+          E.applyOn(pts, off, them, replies[j][k], v, bar);
+        /* They pick what is best for THEM... */
+        var theirs = evaluate(pts, off, them, v, bar);
+        if (theirs > bestTheirs) {
+          bestTheirs = theirs;
+          bestReply = { pts: pts, off: off, bar: bar };
+        }
+      }
+      /* ...and we score the result from OUR side. */
+      total += r.p * (bestReply
+        ? evaluate(bestReply.pts, bestReply.off, me, v, bestReply.bar)
+        : evaluate(a.pts, a.off, me, v, a.bar));
+    }
+    return total;
+  }
+
+  /* Rank the candidate plans, cheaply first and then properly.
+     `width` caps how many of the statically-best plans get the full
+     treatment; `budgetMs` is a hard ceiling so the UI never hangs — if
+     the search cannot finish it falls back to the static ranking rather
+     than returning a half-computed average. */
+  function searchPlan(state, opts) {
+    opts = opts || {};
+    var plans = opts.plans || remainingPlans(state);
+    if (!plans.length) return { plan: [], score: 0, depth: 0 };
+
+    var ranked = plans.map(function (pl) { return { pl: pl, s: scorePlan(state, pl) }; })
+                      .sort(function (a, b) { return b.s - a.s; });
+
+    if (opts.depth !== 2 || ranked.length === 1) {
+      return { plan: ranked[0].pl, score: ranked[0].s, depth: 1, considered: ranked.length };
+    }
+
+    var width = opts.width || 8;
+    var deadline = Date.now() + (opts.budgetMs || 900);
+    var top = ranked.slice(0, width);
+
+    var best = null, bestScore = -Infinity, searched = 0;
+    for (var i = 0; i < top.length; i++) {
+      var ev = expectedScore(state, top[i].pl, deadline);
+      if (ev === null) break;                  // out of time
+      searched++;
+      if (ev > bestScore) { bestScore = ev; best = top[i].pl; }
+    }
+
+    /* Anything less than two searched is not a comparison. */
+    if (searched < 2) {
+      return { plan: ranked[0].pl, score: ranked[0].s, depth: 1, considered: ranked.length };
+    }
+    return {
+      plan: best, score: bestScore, depth: 2,
+      searched: searched, considered: ranked.length
+    };
+  }
+
   /* level: 'easy' | 'normal' | 'hard' */
-  function choosePlan(state, level) {
+  function choosePlan(state, level, opts) {
     var plans = remainingPlans(state);
     if (!plans.length) return [];
     if (level === 'easy') return plans[Math.floor(Math.random() * plans.length)];
+
+    /* Depth 2 is available and opt-in, but off by default: it is not
+       measurably stronger (tools/bench_ai.js) and it disagrees with the
+       coach on long-horizon positions, which would make the app argue
+       with itself. One opinion everywhere. See the README. */
+    if (opts && opts.depth === 2) {
+      return searchPlan(state, { plans: plans, depth: 2, width: 8, budgetMs: 900 }).plan;
+    }
 
     var noise = level === 'hard' ? 0 : 9;
     var best = null, bestScore = -Infinity;
@@ -179,8 +291,13 @@
     return best;
   }
 
-  function hint(state) {
-    var plan = choosePlan(state, 'hard');
+  /* Depth 1 by default so the hint, the coach's verdict and the
+     opponent's play are all the same opinion. */
+  function hint(state, opts) {
+    var res = searchPlan(state, {
+      depth: (opts && opts.depth) || 1, width: 8, budgetMs: 900
+    });
+    var plan = res.plan;
     if (!plan || !plan.length) return null;
 
     var v = E.variantOf(state);
@@ -216,12 +333,15 @@
       plan: plan,
       next: plan[0],
       line: plan.map(label).join(', then '),
-      why: why.join(', and ')
+      why: why.join(', and '),
+      depth: res.depth
     };
   }
 
   root.AI = {
-    evaluate: evaluate, scorePlan: scorePlan, remainingPlans: remainingPlans,
-    choosePlan: choosePlan, hint: hint, chanceOf: chanceOf, WEIGHTS: WEIGHTS
+    evaluate: evaluate, scorePlan: scorePlan, expectedScore: expectedScore,
+    searchPlan: searchPlan, remainingPlans: remainingPlans,
+    choosePlan: choosePlan, hint: hint, chanceOf: chanceOf,
+    WEIGHTS: WEIGHTS, ROLLS: ROLLS
   };
 })(typeof window !== 'undefined' ? window : globalThis);

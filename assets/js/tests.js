@@ -531,6 +531,131 @@
     });
   })();
 
+  describe('Two-ply search');
+
+  (function () {
+    var s = E.newGame();
+    E.setRoll(s, 6, 5);
+
+    var shallow = window.AI.searchPlan(s, { depth: 1 });
+    eq('a shallow search reports depth 1', shallow.depth, 1);
+    ok('and returns a legal plan', shallow.plan.length > 0);
+
+    var deep = window.AI.searchPlan(s, { depth: 2, width: 4, budgetMs: 8000 });
+    eq('a deep search reports depth 2', deep.depth, 2);
+    ok('it examined more than one candidate', deep.searched >= 2, String(deep.searched));
+    ok('and returns a plan that is legal right now',
+       deep.plan.every(function (m, i) {
+         return i > 0 || E.legalNow(s).some(function (l) { return E.sameMove(l, m); });
+       }));
+
+    /* An impossible budget must degrade to the shallow answer rather
+       than return a half-finished average. */
+    var starved = window.AI.searchPlan(s, { depth: 2, width: 8, budgetMs: -1 });
+    eq('an exhausted budget falls back to depth 1', starved.depth, 1);
+    ok('and still returns a plan', starved.plan.length > 0);
+
+    /* The 21 distinct rolls must be a proper probability distribution,
+       or the expectation is silently skewed. */
+    eq('there are 21 distinct rolls', window.AI.ROLLS.length, 21);
+    var pSum = window.AI.ROLLS.reduce(function (a, r) { return a + r.p; }, 0);
+    ok('their probabilities sum to 1', Math.abs(pSum - 1) < 1e-9, String(pSum));
+    eq('doubles are weighted 1/36', window.AI.ROLLS.filter(function (r) {
+      return r.d[0] === r.d[1];
+    }).length, 6);
+  })();
+
+  (function () {
+    /* Winning outright must dominate anything positional. */
+    var s = E.fromSpec({ 1: 'W', 20: 'BBBBBBBBBBBBBBB' }, 'W', {});
+    s.off.W = 14;
+    E.setRoll(s, 1, 1);
+    var winning = E.legalNow(s).filter(function (m) { return m.off; })[0];
+    ok('the winning move exists', !!winning);
+    ok('and scores as a win', window.AI.expectedScore(s, [winning]) > 1000);
+  })();
+
+  /* Known limitation, pinned down deliberately rather than left to be
+     rediscovered.
+     Looking one reply ahead prices the IMMEDIATE risk of a blot well,
+     but is blind past that reply. Mahbooseh's biggest decisions are
+     long-horizon: on drill 2, keeping two checkers on your starting
+     point is safe for exactly one turn and disastrous three turns later,
+     when you are forced to break it. Two-ply cannot see that, so it
+     keeps the point and contradicts the drill. This is why the coach
+     grades at depth 1, where the evaluator's start-point term carries
+     that knowledge as a heuristic. */
+  (function () {
+    var d = C.DRILLS[1];
+    var s = E.fromSpec(d.spec, 'W', {});
+    E.setRoll(s, d.roll[0], d.roll[1]);
+    var clear = s.plans.filter(function (pl) {
+      return pl.some(function (m) { return m.from === 24 && m.to === 18; }) &&
+             pl.some(function (m) { return m.from === 24 && m.to === 19; });
+    })[0];
+    var keep = s.plans.filter(function (pl) {
+      return !pl.some(function (m) { return m.from === 24; });
+    })[0];
+    ok('both candidate lines exist', !!clear && !!keep);
+
+    ok('one-ply clears the starting point (agrees with the drill)',
+       window.AI.scorePlan(s, clear) > window.AI.scorePlan(s, keep));
+    ok('two-ply keeps it instead — the documented horizon limitation',
+       window.AI.expectedScore(s, keep) > window.AI.expectedScore(s, clear));
+  })();
+
+  /* What actually matters to a learner: the coach, at the depth it is
+     really configured to use, agrees with every drill. */
+  (function () {
+    C.DRILLS.forEach(function (d, i) {
+      var tag = 'drill ' + (i + 1) + ' (' + d.title + ')';
+      var s = E.fromSpec(d.spec, 'W', {});
+      E.setRoll(s, d.roll[0], d.roll[1]);
+      var best = window.AI.searchPlan(s, { depth: 1 }).plan;
+      if (d.key) {
+        ok(tag + ': the coach as configured agrees with the answer key',
+           d.key.every(function (k) {
+             return best.some(function (m) { return m.from === k.from && (m.off ? 0 : m.to) === k.to; });
+           }), 'prefers ' + Coach.line(best));
+      }
+      if (d.avoid) {
+        ok(tag + ': and avoids ' + d.avoid.join(','),
+           !best.some(function (m) { return d.avoid.indexOf(m.from) >= 0; }),
+           'prefers ' + Coach.line(best));
+      }
+    });
+  })();
+
+  (function () {
+    /* A deep review must grade the played line against alternatives
+       scored the same way, and say so. */
+    var d = C.DRILLS[0];
+    var s = E.fromSpec(d.spec, 'W', {});
+    E.setRoll(s, d.roll[0], d.roll[1]);
+    var manaPlan = s.plans.filter(function (pl) {
+      return pl.some(function (m) { return m.from === 4 && m.to === 1; });
+    })[0];
+    var r = Coach.reviewTurn(s, manaPlan, { depth: 2, width: 6, budgetMs: 20000 });
+    ok('a deep review is produced', !!r);
+    eq('and reports its depth', r.depth, 2);
+    ok('taking the mana is still graded best', r.grade.key === 'best', r.grade.key);
+
+    var missPlan = s.plans.filter(function (pl) {
+      return !pl.some(function (m) { return m.to === 1; });
+    })[0];
+    var r2 = Coach.reviewTurn(s, missPlan, { depth: 2, width: 6, budgetMs: 20000 });
+    ok('missing it is still a blunder at depth 2', r2 && r2.grade.key === 'blunder', r2 && r2.grade.key);
+
+    var r1 = Coach.reviewTurn(s, missPlan, { depth: 1 });
+    ok('and at the depth actually used', r1 && r1.grade.key === 'blunder', r1 && r1.grade.key);
+    eq('which reports depth 1', r1.depth, 1);
+
+    /* With no time to think it must still return a usable verdict. */
+    var r3 = Coach.reviewTurn(s, missPlan, { depth: 2, width: 6, budgetMs: -1 });
+    ok('a starved review still grades', !!r3);
+    eq('falling back to depth 1', r3.depth, 1);
+  })();
+
   describe('Coach — move risk');
 
   (function () {
