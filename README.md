@@ -55,7 +55,7 @@ server for you.
 | `tools/make_icons.py` | Regenerates the PNG icons from source |
 | `tools/test_sw.js` | 27 service-worker assertions, run under Node |
 | `tools/bench_ai.js` | Head-to-head AI strength test with duplicate dice |
-| `assets/js/tests.js` | 388 assertions: engine, coach, content, themes, offline setup |
+| `assets/js/tests.js` | 404 assertions: engine, coach, content, themes, offline setup |
 
 ## How the engine models the board
 
@@ -102,16 +102,24 @@ Two rules are worth knowing about if you touch the code:
 
 ## Themes
 
-Three, switchable from the header, and a theme changes the entire app — banner, background, board,
+Five, switchable from the header, and a theme changes the entire app — banner, background, board,
 checkers, dice, buttons, lesson diagrams:
 
 - **Vortex** — the original. Black ground, purple and cyan, neon glow, palette ported from
   VortexPortal.
-- **Nova** — brushed silver under glass. The only light theme, so the ink inverts to dark text on a
-  bright ground; borders are a cold electric blue with a soft bloom, and the checkers drop colour
-  entirely for graphite and near-black.
+- **Nova** — brushed silver under glass. A light theme, so the ink inverts to dark text on a bright
+  ground; cold electric-blue borders, and the checkers drop colour for graphite and near-black.
+- **Nova Plus** — Nova taken deeper. Smoked grey glass over a dark graphite ground, lit from
+  behind: translucent blurred panels, a colder cyan that actually glows, polished chrome and
+  black-glass checkers.
+- **Mono** — no colour at all. Pure black, white text, shiny black and shiny white checkers where
+  the highlight and rim do all the work. Even the status colours are drained to greys.
 - **Qahwa** (قهوة) — the coffeehouse table. Walnut frame, points inlaid in two woods, bone and
   dark-walnut checkers, brass fittings.
+
+Selects are drawn with `appearance: none` and a CSS chevron, because a native `<select>` keeps the
+OS chrome and ignores the palette entirely — which is exactly how the theme picker ended up being
+the one control that did not follow its own theme.
 
 Every colour in the app comes from a token in `assets/css/themes.css`; **nothing else hardcodes
 one**, which is what makes a whole-app reskin a single attribute on `<html>`. Adding a theme means
@@ -148,6 +156,20 @@ but to a screen reader it was an unnamed `<div>` full of unnamed `<div>`s — no
 
 Verified through the accessibility tree, not by eye. **Not** verified with an actual screen reader —
 NVDA is free, and hearing whether the phrasing flows is the obvious next step.
+
+## Naming the two sides
+
+Never by colour. Across the five themes the sides are purple/cyan, graphite/black, bone/walnut and
+plain white/black, so any colour word is wrong in most of them. Against the computer they are
+**You** and **Opponent**; in two-player mode they are **Player 1** and **Player 2**. Player 1 always
+runs 24 → 1. The lessons are written the same way — "your checkers" and "the opponent's" — so the
+teaching text stays true whichever theme is on.
+
+## The opening roll
+
+As at a real table: each side throws **one** die, the higher number starts, and the winner plays
+those two numbers as their first turn. A tie is thrown again — which is also why the first turn can
+never be a double. The two dice are shown captioned with who rolled what before play begins.
 
 ## The coach
 

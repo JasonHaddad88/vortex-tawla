@@ -256,3 +256,160 @@
 
   --focus-ring:    #f0c874;
 }
+
+/* ---------------------------------------------------------------------
+ * MONO — no colour at all. Pure black ground, white text, and checkers
+ * that are polished black and polished white: the highlight and rim do
+ * all the work, since there is no hue to lean on. Status colours stay as
+ * greys so nothing breaks the discipline; the accent is plain white.
+ * ------------------------------------------------------------------- */
+:root[data-theme="mono"] {
+  --bg:            #000000;
+  --halo-1:        rgba(255, 255, 255, 0.05);
+  --halo-2:        rgba(255, 255, 255, 0.03);
+  --surface:       #0a0a0a;
+  --surface-2:     #131313;
+  --glass:         rgba(10, 10, 10, 0.80);
+
+  --text:          #ffffff;
+  --muted:         #9a9a9a;
+  --subtle:        #c9c9c9;
+
+  --border:        rgba(255, 255, 255, 0.20);
+  --border-strong: rgba(255, 255, 255, 0.55);
+
+  --accent:        #ffffff;
+  --accent-glow:   rgba(255, 255, 255, 0.30);
+  --accent-wash:   rgba(255, 255, 255, 0.10);
+  --accent-tint:   rgba(255, 255, 255, 0.20);
+  --accent-2:      #d0d0d0;
+  --accent-2-glow: rgba(255, 255, 255, 0.26);
+  --accent-2-wash: rgba(255, 255, 255, 0.08);
+
+  --brand-1:       #ffffff;
+  --brand-2:       #7a7a7a;
+  --logo-core:     var(--bg);
+
+  /* Kept legible on black but drained of hue to match the theme. */
+  --danger:        #ff8f8f;
+  --success:       #b7f0cf;
+  --warning:       #f0dfa8;
+
+  --board-1:       #0d0d0d;
+  --board-2:       #050505;
+  --board-edge:    rgba(255, 255, 255, 0.35);
+  --board-inner:   rgba(255, 255, 255, 0.03);
+  --board-shadow:  rgba(0, 0, 0, 0.85);
+  --pt-a:          rgba(255, 255, 255, 0.13);
+  --pt-b:          rgba(255, 255, 255, 0.05);
+  --bar-1:         rgba(255, 255, 255, 0.10);
+  --bar-2:         rgba(255, 255, 255, 0.04);
+  --tray-bg:       rgba(255, 255, 255, 0.05);
+
+  --pt-movable:    rgba(255, 255, 255, 0.26);
+  --pt-selected:   rgba(255, 255, 255, 0.42);
+  --pt-target:     rgba(183, 240, 207, 0.30);
+  --pt-target-pin: rgba(240, 223, 168, 0.32);
+  --pt-risk-blot:  rgba(240, 223, 168, 0.22);
+  --pt-risk-mana:  rgba(255, 143, 143, 0.34);
+  --pt-hint-src:   rgba(255, 255, 255, 0.30);
+  --pt-hint-dst:   rgba(255, 255, 255, 0.18);
+
+  /* Shiny white and shiny black: a hard specular highlight offset to the
+     upper left, a deep falloff, and a rim that separates each from the
+     board. */
+  --chk-w:         #f4f4f4;
+  --chk-w-hi:      #ffffff;
+  --chk-w-lo:      #8e8e8e;
+  --chk-w-rim:     #ffffff;
+  --chk-b:         #101010;
+  --chk-b-hi:      #6e6e6e;
+  --chk-b-lo:      #000000;
+  --chk-b-rim:     #8a8a8a;
+  --chk-b-inset:   rgba(255, 255, 255, 0.30);
+
+  --die-1:         #ffffff;
+  --die-2:         #bdbdbd;
+  --die-pip:       #000000;
+  --die-glow:      rgba(255, 255, 255, 0.25);
+
+  --focus-ring:    #ffffff;
+}
+
+/* ---------------------------------------------------------------------
+ * NOVA PLUS — Nova taken deeper. Smoked grey glass rather than silver,
+ * lit from behind: the ground is a dark graphite gradient, panels are
+ * translucent and blurred, and the blue is a colder, more electric cyan
+ * that actually glows against the dark. Checkers are polished chrome and
+ * black glass.
+ * ------------------------------------------------------------------- */
+:root[data-theme="novaplus"] {
+  --bg:            #0b0e13;
+  --halo-1:        rgba(90, 170, 255, 0.16);
+  --halo-2:        rgba(40, 60, 90, 0.55);
+  --surface:       rgba(30, 37, 48, 0.72);
+  --surface-2:     rgba(22, 28, 37, 0.78);
+  --glass:         rgba(16, 21, 28, 0.62);
+
+  --text:          #eaf2fb;
+  --muted:         #93a3b8;
+  --subtle:        #bccbde;
+
+  --border:        rgba(120, 190, 255, 0.22);
+  --border-strong: rgba(120, 190, 255, 0.58);
+
+  --accent:        #58c8ff;
+  --accent-glow:   rgba(88, 200, 255, 0.55);
+  --accent-wash:   rgba(88, 200, 255, 0.12);
+  --accent-tint:   rgba(88, 200, 255, 0.24);
+  --accent-2:      #8fe3ff;
+  --accent-2-glow: rgba(143, 227, 255, 0.50);
+  --accent-2-wash: rgba(143, 227, 255, 0.12);
+
+  --brand-1:       #9fb4cc;
+  --brand-2:       #58c8ff;
+  --logo-core:     #0b0e13;
+
+  --danger:        #ff7a6e;
+  --success:       #5ce0a8;
+  --warning:       #ffd166;
+
+  /* Smoked glass over a dark cabinet. */
+  --board-1:       #171d26;
+  --board-2:       #0e131a;
+  --board-edge:    rgba(120, 190, 255, 0.42);
+  --board-inner:   rgba(120, 190, 255, 0.07);
+  --board-shadow:  rgba(0, 0, 0, 0.75);
+  --pt-a:          rgba(150, 175, 205, 0.20);
+  --pt-b:          rgba(88, 200, 255, 0.13);
+  --bar-1:         rgba(120, 190, 255, 0.12);
+  --bar-2:         rgba(255, 255, 255, 0.04);
+  --tray-bg:       rgba(255, 255, 255, 0.05);
+
+  --pt-movable:    rgba(88, 200, 255, 0.28);
+  --pt-selected:   rgba(88, 200, 255, 0.46);
+  --pt-target:     rgba(92, 224, 168, 0.30);
+  --pt-target-pin: rgba(255, 209, 102, 0.32);
+  --pt-risk-blot:  rgba(255, 209, 102, 0.22);
+  --pt-risk-mana:  rgba(255, 122, 110, 0.36);
+  --pt-hint-src:   rgba(143, 227, 255, 0.30);
+  --pt-hint-dst:   rgba(143, 227, 255, 0.20);
+
+  /* Polished chrome and black glass. */
+  --chk-w:         #cdd8e6;
+  --chk-w-hi:      #ffffff;
+  --chk-w-lo:      #79879a;
+  --chk-w-rim:     #f2f7ff;
+  --chk-b:         #1b2029;
+  --chk-b-hi:      #56657a;
+  --chk-b-lo:      #05070a;
+  --chk-b-rim:     #7f93ad;
+  --chk-b-inset:   rgba(160, 200, 240, 0.28);
+
+  --die-1:         #f4f9ff;
+  --die-2:         #c2d0e0;
+  --die-pip:       #0b0e13;
+  --die-glow:      rgba(88, 200, 255, 0.45);
+
+  --focus-ring:    #8fe3ff;
+}

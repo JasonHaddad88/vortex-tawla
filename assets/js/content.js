@@ -35,7 +35,7 @@ with the same 15 checkers each, playing to an agreed number of points — usuall
       players run the same way round the board and it becomes a pure blocking race.</li>
 </ul>
 
-<div class="callout cyan">
+<div class="callout alt">
   <span class="h">Also known as</span>
   Mahbooseh is the same game as Greek <em>plakoto</em>, Turkish <em>mahbusa</em> and Persian
   <em>mahbooseh</em>. If you learn it here you can sit down at a board anywhere from Athens to Tehran.
@@ -53,8 +53,8 @@ and that single mechanic is the whole game.</p>
       arabic: 'اللوح',
       html: `
 <p>The board has 24 <strong>points</strong> (بيت, <em>beit</em> — "house"), in four quadrants of six.
-Throughout this app you are <span style="color:var(--chk-w)">purple</span> and your opponent is
-<span style="color:var(--chk-b)">cyan</span>. Points are numbered from your point of view:</p>
+Throughout this app your checkers are the <span style="color:var(--chk-w)">lighter</span> set and
+your opponent has the <span style="color:var(--chk-b)">darker</span> set, in whichever theme you use. Points are numbered from your point of view:</p>
 
 <div class="diagram" data-spec='{}' data-cap="An empty board. Your home board is the bottom-right quadrant, points 1 to 6. Your opponent's home is the top-right, points 19 to 24."></div>
 
@@ -139,13 +139,13 @@ half of the board; a die that lands cocked or outside is thrown again.</p>
 <p>A point holding <strong>two or more</strong> enemy checkers is closed to you. You cannot land
 there, and you cannot pass <em>through</em> it as the middle stop of a two-leg move.</p>
 
-<div class="diagram" data-spec='{"13":"WWWWW","11":"BB","10":"BB","9":"BB","8":"BB","7":"BB","6":"BB","20":"BBB","22":"WWWWWWWWWW"}' data-cap="Six consecutive blocked points, 6 through 11 — a full prime. The purple checkers on 13 cannot move past it with any single die."></div>
+<div class="diagram" data-spec='{"13":"WWWWW","11":"BB","10":"BB","9":"BB","8":"BB","7":"BB","6":"BB","20":"BBB","22":"WWWWWWWWWW"}' data-cap="Six consecutive blocked points, 6 through 11 — a full prime. Your checkers on 13 cannot move past it with any single die."></div>
 
 <p>Six blocked points in a row is a <strong>prime</strong>. No die from 1 to 6 can jump it, so
 anything behind it is stuck until the wall breaks up. In Mahbooseh there is no bar to re-enter
 from, so blocking and trapping are the <em>only</em> two ways to interfere with your opponent.</p>
 
-<div class="callout cyan">
+<div class="callout alt">
   <span class="h">Two checkers is the magic number</span>
   One checker on a point is a target. Two checkers on a point is a wall. Almost every decision in
   this game reduces to that difference.
@@ -161,9 +161,9 @@ from, so blocking and trapping are the <em>only</em> two ways to interfere with 
 <p>This is the heart of the game. If a point holds <strong>exactly one</strong> enemy checker, you
 may land on it. Nothing is sent anywhere — <strong>you sit on top of it</strong>.</p>
 
-<div class="diagram" data-spec='{"9":"B","13":"WWWW","20":"BBBB","4":"WWWW","1":"BBBB","24":"WWWWWWW","21":"BBBBBB"}' data-cap="Before: a lone cyan checker on point 9 — a blot. Purple on 13 can reach it with a 4."></div>
+<div class="diagram" data-spec='{"9":"B","13":"WWWW","20":"BBBB","4":"WWWW","1":"BBBB","24":"WWWWWWW","21":"BBBBBB"}' data-cap="Before: a lone enemy checker on point 9 — a blot. Your stack on 13 can reach it with a 4."></div>
 
-<div class="diagram" data-spec='{"9":"BW","13":"WWW","20":"BBBB","4":"WWWW","1":"BBBB","24":"WWWWWWW","21":"BBBBBB"}' data-cap="After: the cyan checker is mahboos — imprisoned. It is drawn dimmed and crossed, and it cannot move at all."></div>
+<div class="diagram" data-spec='{"9":"BW","13":"WWW","20":"BBBB","4":"WWWW","1":"BBBB","24":"WWWWWWW","21":"BBBBBB"}' data-cap="After: the enemy checker is mahboos — imprisoned. It is drawn dimmed and crossed, and it cannot move at all."></div>
 
 <p>The rules of a pin:</p>
 
@@ -196,7 +196,7 @@ checker on top, you can land there yourself and pin the jailer. Both checkers ar
 <p>Any lone checker of yours is a <strong>blot</strong>. Before you leave one, count the numbers
 that reach it — the <strong>direct shots</strong>.</p>
 
-<div class="diagram" data-spec='{"14":"W","20":"BB","18":"BB","16":"BB","13":"BB","24":"WWWWWWWWWWWWWW","1":"BBBBBBB"}' data-cap="The purple blot on 14. Cyan runs upward, so only the checkers below it can reach: the stack on 13 hits with a 1. The cyan points on 16, 18 and 20 are already past it and can never come back."></div>
+<div class="diagram" data-spec='{"14":"W","20":"BB","18":"BB","16":"BB","13":"BB","24":"WWWWWWWWWWWWWW","1":"BBBBBBB"}' data-cap="Your blot on 14. The opponent runs upward, so only their checkers below it can reach: the stack on 13 hits with a 1. Their points on 16, 18 and 20 are already past it and can never come back."></div>
 
 <p>Your opponent moves upward, so anything they own on a <em>lower</em> number than your blot can
 hit it. A blot six or fewer points ahead of an enemy stack is exposed to a direct number; further
@@ -232,7 +232,7 @@ As you march them out, that tower shrinks: fifteen, ten, five, three, two… and
 <p>That last checker sitting alone on your own starting point is the <strong>mana</strong> (المانة,
 "the mother"). If your opponent lands on it, you have suffered the worst thing in the game.</p>
 
-<div class="diagram" data-spec='{"24":"WB","23":"BBB","22":"BBB","21":"BBB","20":"BBB","19":"BB","6":"WWWW","5":"WWW","4":"WWW","3":"WW","2":"WW"}' data-cap="Disaster: the last purple checker on 24 has been pinned. It owes 24 pips, it cannot move, and purple can never bear off while cyan holds that point."></div>
+<div class="diagram" data-spec='{"24":"WB","23":"BBB","22":"BBB","21":"BBB","20":"BBB","19":"BB","6":"WWWW","5":"WWW","4":"WWW","3":"WW","2":"WW"}' data-cap="Disaster: your last checker on 24 has been pinned. It owes 24 pips, it cannot move, and you can never bear off while the opponent holds that point."></div>
 
 <div class="callout warn">
   <span class="h">Why the mana ends games</span>
@@ -255,7 +255,7 @@ view's settings — but either way, the practical advice is identical:</p>
       win available to you.</li>
 </ul>
 
-<div class="callout cyan">
+<div class="callout alt">
   <span class="h">The double mana — a genuine draw</span>
   If <em>both</em> players lose their mother checker, neither side can ever bear off. In the
   extreme case — each player piling their remaining fourteen checkers onto the very point where
@@ -284,7 +284,7 @@ start taking them off.</p>
   <li>You may always choose to move a checker inside your home rather than bear one off.</li>
 </ul>
 
-<div class="diagram" data-spec='{"5":"W","4":"WWW","3":"WWW","2":"WWWW","1":"WWWW","15":"BBBBB","14":"BBBBB","13":"BBBBB"}' data-cap="All fifteen purple checkers are home and point 6 is empty, so a 6 bears off from point 5 — the highest point still occupied."></div>
+<div class="diagram" data-spec='{"5":"W","4":"WWW","3":"WWW","2":"WWWW","1":"WWWW","15":"BBBBB","14":"BBBBB","13":"BBBBB"}' data-cap="All fifteen of your checkers are home and point 6 is empty, so a 6 bears off from point 5 — the highest point still occupied."></div>
 
 <div class="callout warn">
   <span class="h">Two traps specific to Mahbooseh</span>
@@ -316,7 +316,7 @@ time the game is usually over.</p>
 <p>Matches run to 5 or 7 points. There is no doubling cube and no backgammon/triple win in the
 traditional game — a mars is the maximum.</p>
 
-<div class="callout cyan">
+<div class="callout alt">
   <span class="h">Practical consequence</span>
   If you are clearly losing, getting <em>one single checker</em> off is worth real points. Stop
   playing for the win and start racing one checker home to save the mars.
@@ -387,7 +387,7 @@ Greek tables. The higher number is said first.</p>
 <strong>dubara</strong> (دوبارة), 6-6 is <strong>dou-shesh</strong>, 5-5 is
 <strong>dou-benj</strong>.</p>
 
-<div class="callout cyan">
+<div class="callout alt">
   <span class="h">Regional variation</span>
   These calls drift from city to city and from table to table — Beirut, Damascus and Amman all
   have their own habits, and Turkish tables use <em>düşeş</em>, <em>dübeş</em>, <em>hep yek</em>.
@@ -431,7 +431,7 @@ the one most people learn first outside the Levant.</p>
       <em>backgammon</em>, worth three.</li>
 </ul>
 
-<div class="callout cyan">
+<div class="callout alt">
   <span class="h">What stays the same</span>
   The direction of travel, the dice, the rule that you must use both numbers if you can, the way
   points are blocked by two or more checkers, and bearing off. Everything you learned about the
@@ -473,9 +473,9 @@ shows both pip counts live, so you can always see who is ahead.</p>
 <strong>hit</strong> it: the checker comes off the board entirely and goes on the <strong>bar</strong>,
 the ridge down the middle.</p>
 
-<div class="diagram" data-spec='{"13":"WWWWW","9":"B","8":"WWW","6":"WWWWW","4":"WW","1":"BB","12":"BBBB","17":"BBB","19":"BBBBB"}' data-variant="fransawiyyeh" data-cap="Before: a lone cyan checker on point 9. Purple on 13 hits it with a 4."></div>
+<div class="diagram" data-spec='{"13":"WWWWW","9":"B","8":"WWW","6":"WWWWW","4":"WW","1":"BB","12":"BBBB","17":"BBB","19":"BBBBB"}' data-variant="fransawiyyeh" data-cap="Before: a lone enemy checker on point 9. Your stack on 13 hits it with a 4."></div>
 
-<div class="diagram" data-spec='{"13":"WWWW","9":"W","8":"WWW","6":"WWWWW","4":"WW","1":"BB","12":"BBBB","17":"BBB","19":"BBBBB"}' data-bar='{"B":1}' data-variant="fransawiyyeh" data-cap="After: the cyan checker is on the bar, shown in the centre spine. It now owes the full 25 pips."></div>
+<div class="diagram" data-spec='{"13":"WWWW","9":"W","8":"WWW","6":"WWWWW","4":"WW","1":"BB","12":"BBBB","17":"BBB","19":"BBBBB"}' data-bar='{"B":1}' data-variant="fransawiyyeh" data-cap="After: the enemy checker is on the bar, shown in the centre spine. It now owes the full 25 pips."></div>
 
 <div class="callout warn">
   <span class="h">This is the real difference</span>
@@ -509,7 +509,7 @@ from.</p>
   <li>With two dice you must enter both checkers before anything else moves.</li>
 </ul>
 
-<div class="diagram" data-spec='{"24":"BB","23":"BB","22":"BB","21":"BB","20":"BB","19":"BBBBB","13":"WWWWW","8":"WWW","6":"WWWWW","4":"W"}' data-bar='{"W":1}' data-variant="fransawiyyeh" data-cap="A closed board. All six of cyan's home points are made, so the purple checker on the bar cannot enter on any number and forfeits every turn until a point opens."></div>
+<div class="diagram" data-spec='{"24":"BB","23":"BB","22":"BB","21":"BB","20":"BB","19":"BBBBB","13":"WWWWW","8":"WWW","6":"WWWWW","4":"W"}' data-bar='{"W":1}' data-variant="fransawiyyeh" data-cap="A closed board. All six enemy home points are made, so your checker on the bar cannot enter on any number and forfeits every turn until a point opens."></div>
 
 <div class="callout">
   <span class="h">Why the home board matters so much</span>
@@ -529,7 +529,7 @@ from.</p>
 middle stop of a two-leg move. Six such points in a row make a <strong>prime</strong>, and nothing
 can jump it with a single die.</p>
 
-<div class="diagram" data-spec='{"9":"WW","8":"WW","7":"WW","6":"WW","5":"WW","4":"WW","13":"WWW","1":"BBBBB","2":"BBBBB","3":"BBBBB"}' data-variant="fransawiyyeh" data-cap="A full prime from 4 to 9. Every cyan checker is behind it and none of them can get out until purple is forced to break it up."></div>
+<div class="diagram" data-spec='{"9":"WW","8":"WW","7":"WW","6":"WW","5":"WW","4":"WW","13":"WWW","1":"BBBBB","2":"BBBBB","3":"BBBBB"}' data-variant="fransawiyyeh" data-cap="A full prime from 4 to 9. Every enemy checker is behind it and none of them can get out until you are forced to break it up."></div>
 
 <p>The mirror of a prime is an <strong>anchor</strong>: a point of your own inside the opponent's
 home board. Here the two games disagree sharply.</p>
@@ -558,7 +558,7 @@ somewhere to run to, and avoid leaving blots your opponent can hit with a direct
 die matching a point's number takes a checker off it, and a die higher than any point you still
 occupy takes one off your highest.</p>
 
-<div class="diagram" data-spec='{"6":"WW","5":"WWW","4":"WWW","3":"WWW","2":"WW","1":"WW","19":"BBBBB","20":"BBBBB","21":"BBBBB"}' data-variant="fransawiyyeh" data-cap="All fifteen home and ready to bear off. Cyan is doing the same at the other end — this one is a pure race."></div>
+<div class="diagram" data-spec='{"6":"WW","5":"WWW","4":"WWW","3":"WWW","2":"WW","1":"WW","19":"BBBBB","20":"BBBBB","21":"BBBBB"}' data-variant="fransawiyyeh" data-cap="All fifteen home and ready to bear off. The opponent is doing the same at the other end — this one is a pure race."></div>
 
 <div class="callout warn">
   <span class="h">One rule that catches people</span>
@@ -576,7 +576,7 @@ occupy takes one off your highest.</p>
       checker on the bar or in the winner's home board.</li>
 </ul>
 
-<div class="callout cyan">
+<div class="callout alt">
   <span class="h">Compare with Mahbooseh</span>
   Mahbooseh tops out at the mars, worth two. Fransawiyyeh has the extra tier, which is why
   saving a gammon — racing one checker home when the game is already lost — matters even more here.
@@ -615,30 +615,30 @@ occupy takes one off your highest.</p>
       spec: { 1: 'B', 19: 'BBBB', 20: 'BBBB', 21: 'BBB', 22: 'BBB',
               4: 'W', 6: 'WWW', 8: 'WWW', 10: 'WWW', 13: 'WWW', 24: 'WW' },
       roll: [3, 5],
-      q: 'Cyan has left a single checker on point 1 — their own starting point. You roll shesh… no, se-benj (3 and 5). What do you do?',
+      q: 'Your opponent has left a single checker on point 1 — their own starting point. You roll shesh… no, se-benj (3 and 5). What do you do?',
       key: [{ from: 4, to: 1 }],
       model: 'Play 4→1 with the 3, then 6→1 with the 5.',
-      why: 'Point 1 is cyan\'s starting point, so the lone checker there is their mana. Pinning it means that checker owes 24 pips and can never move — cyan cannot bear off a single checker for the rest of the game. Following up with 6→1 puts a second checker on the prison so you keep the pin even when you start moving off.'
+      why: 'Point 1 is the opponent\'s starting point, so the lone checker there is their mana. Pinning it means that checker owes 24 pips and can never move — the opponent cannot bear off a single checker for the rest of the game. Following up with 6→1 puts a second checker on the prison so you keep the pin even when you start moving off.'
     },
     {
       title: 'Never leave the mother alone',
       spec: { 24: 'WW', 18: 'WW', 13: 'WWW', 8: 'WWWW', 6: 'WWWW',
               12: 'BB', 15: 'BB', 20: 'BBB', 21: 'BBB', 22: 'BBB', 23: 'BB' },
       roll: [6, 5],
-      q: 'You have two checkers left on your starting point, 24. You roll shesh-besh (6 and 5). Cyan has checkers on 20, 21, 22 and 23. How do you play it?',
+      q: 'You have two checkers left on your starting point, 24. You roll shesh-besh (6 and 5). Your opponent has checkers on 20, 21, 22 and 23. How do you play it?',
       key: [{ from: 24, to: 18 }, { from: 24, to: 19 }],
       model: 'Play 24→18 with the 6 and 24→19 with the 5, clearing point 24 completely.',
-      why: 'Moving only one checker off 24 leaves the other alone — and cyan pins it from 23, 22, 21 or 20 with a 1, 2, 3 or 4. That is the mana, and the game. Playing both dice off 24 empties the point entirely, so there is nothing left to pin. The 6 lands safely on your own point at 18; the 5 does leave a blot on 19, but only a 4 from cyan\'s stack on 15 reaches it, and a checker caught on 19 owes 19 pips instead of 24.'
+      why: 'Moving only one checker off 24 leaves the other alone — and the opponent pins it from 23, 22, 21 or 20 with a 1, 2, 3 or 4. That is the mana, and the game. Playing both dice off 24 empties the point entirely, so there is nothing left to pin. The 6 lands safely on your own point at 18; the 5 does leave a blot on 19, but only a 4 from the opponent\'s stack on 15 reaches it, and a checker caught on 19 owes 19 pips instead of 24.'
     },
     {
       title: 'Land them together',
       spec: { 24: 'WW', 18: 'WW', 13: 'WWWWW', 11: 'W', 6: 'WWWWW',
               4: 'BBB', 5: 'BBB', 9: 'BBB', 12: 'BBB', 15: 'BBB' },
       roll: [3, 1],
-      q: 'You have a loose checker on 11 and you roll se-yek (3 and 1). Cyan holds 4, 5, 9, 12 and 15. Find the only play that leaves you with no blot at all.',
+      q: 'You have a loose checker on 11 and you roll se-yek (3 and 1). Your opponent holds 4, 5, 9, 12 and 15. Find the only play that leaves you with no blot at all.',
       key: [{ from: 13, to: 10 }, { from: 11, to: 10 }],
       model: 'Play 13→10 with the 3 and 11→10 with the 1, making a new point on 10.',
-      why: 'Both dice land on the same empty point, so the loose checker on 11 stops being loose and you gain a wall instead. Every other legal split leaves at least one blot — and cyan\'s stack on 9 bears directly on point 10 with a 1, while 4 and 5 reach it with a 6 and a 5. Making the point is worth more than the extra pips any alternative gains.'
+      why: 'Both dice land on the same empty point, so the loose checker on 11 stops being loose and you gain a wall instead. Every other legal split leaves at least one blot — and the opponent\'s stack on 9 bears directly on point 10 with a 1, while 4 and 5 reach it with a 6 and a 5. Making the point is worth more than the extra pips any alternative gains.'
     },
     {
       title: 'The overshoot rule',
@@ -655,10 +655,10 @@ occupy takes one off your highest.</p>
       spec: { 3: 'BW', 8: 'WWW', 10: 'WWW', 13: 'WWWW', 18: 'WWWW',
               19: 'BBBB', 20: 'BBBB', 21: 'BBB', 22: 'BBB' },
       roll: [2, 1],
-      q: 'You have a cyan checker imprisoned on point 3, deep in your home board, under a single checker of yours. You roll du-yek (2 and 1). Where do you play?',
+      q: 'You have an enemy checker imprisoned on point 3, deep in your home board, under a single checker of yours. You roll du-yek (2 and 1). Where do you play?',
       avoid: [3],
       model: 'Anywhere except point 3 — for example 18→16 and 18→17, or 13→11 and 11→10.',
-      why: 'Your checker on point 3 is the only thing holding that prisoner. Move it and the cyan checker is free — and it still owes 22 pips, so cyan is helpless while it stays trapped. The 2 and the 1 are small, awkward numbers precisely designed to tempt you into "tidying up" the home board. Spend them somewhere harmless instead. Keeping spare pips elsewhere is exactly how you avoid being forced to break a pin later.'
+      why: 'Your checker on point 3 is the only thing holding that prisoner. Move it and the enemy checker is free — and it still owes 22 pips, so the opponent is helpless while it stays trapped. The 2 and the 1 are small, awkward numbers precisely designed to tempt you into "tidying up" the home board. Spend them somewhere harmless instead. Keeping spare pips elsewhere is exactly how you avoid being forced to break a pin later.'
     }
   ];
 

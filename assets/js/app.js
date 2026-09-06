@@ -18,9 +18,16 @@
      human always being White. */
   function twoPlayer() { return $('difficulty').value === 'human'; }
   function matchTarget() { return parseInt($('match-target').value, 10) || 5; }
+  /* Never name a side by its colour: the themes range from purple/cyan
+     to bone/walnut to plain black/white, so a colour word is wrong in
+     most of them. Player 1 always moves 24 -> 1. */
   function sideName(p) {
-    if (twoPlayer()) return p === E.W ? 'Purple' : 'Cyan';
+    if (twoPlayer()) return p === E.W ? 'Player 1' : 'Player 2';
     return p === E.W ? 'You' : 'Opponent';
+  }
+  function sidePossessive(p) {
+    if (twoPlayer()) return p === E.W ? "Player 1's" : "Player 2's";
+    return p === E.W ? 'your' : "opponent's";
   }
 
   /* ================================================================ */
@@ -65,7 +72,7 @@
   /* Themes                                                            */
   /* ---------------------------------------------------------------- */
 
-  var THEMES = ['vortex', 'nova', 'qahwa'];
+  var THEMES = ['vortex', 'nova', 'novaplus', 'mono', 'qahwa'];
 
   function applyTheme(id) {
     if (THEMES.indexOf(id) < 0) id = 'vortex';
@@ -194,7 +201,7 @@
       Board.diagram(wrap, spec, {
         variant: d.dataset.variant, bar: bar,
         label: cap || 'Board diagram',
-        names: { W: 'purple', B: 'cyan' }    // lessons speak in colours
+        names: { W: "player 1's", B: "player 2's" }
       });
       if (cap) {
         var c = document.createElement('div');
@@ -249,6 +256,8 @@
     hint: null,
     review: null,      // last Coach.reviewTurn result
     focus: null,       // {row,col} of the keyboard cursor on the board
+    phase: 'opening',  // 'opening' until the roll for first is settled
+    opening: null,     // {W,B} single dice of that roll
     history: [],       // one Review entry per completed turn
     log: [],
     score: { W: 0, B: 0 },
@@ -270,13 +279,16 @@
     G.review = null;
     G.over = false;
     G.busy = false;
+    G.phase = 'opening';
+    G.opening = null;
     G.log = [];
     if (!keepHistory) G.history = [];
     flash('');
     var v = E.variantOf(G.state);
     logLine('W', 'New game — <strong>' + v.name + '</strong>. ' +
-      (twoPlayer() ? 'Purple runs 24 → 1, cyan runs 1 → 24.'
-                   : 'You are purple and run 24 → 1.'));
+      (twoPlayer() ? 'Player 1 runs 24 → 1, Player 2 runs 1 → 24. '
+                   : 'You run 24 → 1, the opponent runs 1 → 24. ') +
+      'Roll for first to see who starts.');
     renderPlay();
     renderReview();
     save();
@@ -371,9 +383,7 @@
       onPoint: onPoint,
       label: v.name + ' board. ' + sideName(E.W) + ' runs 24 down to 1, ' +
              sideName(E.B) + ' runs 1 up to 24.',
-      names: twoPlayer()
-        ? { W: 'purple', B: 'cyan' }
-        : { W: 'your', B: "opponent's" },
+      names: { W: sidePossessive(E.W), B: sidePossessive(E.B) },
       focus: G.focus,
       onFocusMove: function (r, c) { G.focus = { row: r, col: c }; }
     });
@@ -390,7 +400,30 @@
     /* dice */
     var dice = $('dice');
     dice.innerHTML = '';
-    diceFaces(s).forEach(function (f) { dice.appendChild(Board.die(f.v, f.spent)); });
+    if (G.phase === 'opening') {
+      /* One die each, captioned, so it is obvious this is the throw for
+         who starts rather than a normal turn. */
+      if (G.opening) {
+        [[E.W, G.opening.W], [E.B, G.opening.B]].forEach(function (pair) {
+          var wrap = document.createElement('div');
+          wrap.className = 'opendie' + (G.opening[pair[0]] ===
+            Math.max(G.opening.W, G.opening.B) ? ' won' : '');
+          var cap = document.createElement('span');
+          cap.className = 'cap';
+          cap.textContent = sideName(pair[0]);
+          wrap.appendChild(cap);
+          wrap.appendChild(Board.die(pair[1], false));
+          dice.appendChild(wrap);
+        });
+      } else {
+        var hint = document.createElement('span');
+        hint.className = 'openhint';
+        hint.textContent = 'Roll for first';
+        dice.appendChild(hint);
+      }
+    } else {
+      diceFaces(s).forEach(function (f) { dice.appendChild(Board.die(f.v, f.spent)); });
+    }
 
     /* hud + stats */
     var pw = E.pipCount(s.points, E.W, v, s.bar), pb = E.pipCount(s.points, E.B, v, s.bar);
@@ -425,11 +458,14 @@
 
     /* controls */
     var rolled = s.roll.length > 0;
-    $('btn-roll').disabled = !myTurn || rolled || G.over;
-    $('btn-undo').disabled = !myTurn || !G.undoStack.length;
-    $('btn-done').disabled = !myTurn || !rolled || E.legalNow(s).length > 0;
-    $('btn-hint').disabled = !myTurn || !rolled || !E.legalNow(s).length;
+    var opening = G.phase === 'opening';
+    $('btn-roll').textContent = opening ? 'Roll for first' : 'Roll';
+    $('btn-roll').disabled = G.busy || G.over || (opening ? false : (!myTurn || rolled));
+    $('btn-undo').disabled = opening || !myTurn || !G.undoStack.length;
+    $('btn-done').disabled = opening || !myTurn || !rolled || E.legalNow(s).length > 0;
+    $('btn-hint').disabled = opening || !myTurn || !rolled || !E.legalNow(s).length;
     $('btn-done').classList.toggle('btn-primary', !$('btn-done').disabled);
+    $('btn-roll').classList.toggle('btn-primary', opening || !$('btn-roll').disabled);
 
     /* log */
     var log = $('log');
@@ -612,7 +648,65 @@
     save();
   }
 
+  /* The opening roll, as at a real table: each side throws ONE die, the
+     higher goes first, and — per the standard rule — the winner plays
+     those two numbers as their first turn. A tie is thrown again, which
+     is also why the first turn can never be a double. */
+  function openingRoll() {
+    if (G.busy || G.over || G.phase !== 'opening') return;
+    var s = G.state;
+    G.busy = true;
+
+    var w = E.rollDice()[0], b = E.rollDice()[0];
+    var tries = 0;
+    while (w === b && tries++ < 50) { w = E.rollDice()[0]; b = E.rollDice()[0]; }
+
+    G.opening = { W: w, B: b };
+    renderPlay();
+
+    var winner = w > b ? E.W : E.B;
+    /* "You start and play" but "Opponent starts and plays". */
+    var second = winner === E.W && !twoPlayer();
+    var msg = sideName(E.W) + ' rolled ' + w + ', ' + sideName(E.B) + ' rolled ' + b +
+              ' — <strong>' + sideName(winner) + '</strong> ' +
+              (second ? 'start' : 'starts') + ' and ' + (second ? 'play' : 'plays') +
+              ' ' + Math.max(w, b) + '-' + Math.min(w, b) + '.';
+    logLine(winner, msg);
+    flash(msg, 'info');
+
+    /* Let the two opening dice sit on screen for a moment before the
+       turn begins, so it reads as a throw rather than a jump cut. */
+    setTimeout(function () {
+      G.busy = false;
+      G.phase = 'playing';
+      s.turn = winner;
+      E.setRoll(s, w, b);
+      G.turnStart = E.clone(s);
+      G.undoStack = [];
+      G.selected = null;
+      G.hint = null;
+      G.review = null;
+      save();
+
+      if (winner === E.B && !twoPlayer()) {
+        renderPlay();
+        setTimeout(function () { aiTurn(true); }, 350);
+        return;
+      }
+
+      if (E.legalNow(s).length === 0) {
+        if (checkOver()) return;
+        logLine(s.turn, 'No legal move — turn forfeited.');
+        renderPlay();
+        setTimeout(endPlayerTurn, 900);
+        return;
+      }
+      renderPlay();
+    }, 1100);
+  }
+
   function rollForPlayer() {
+    if (G.phase === 'opening') return openingRoll();
     var s = G.state;
     if (s.roll.length) return;
     var d = E.rollDice();
@@ -658,15 +752,23 @@
     if (!twoPlayer()) setTimeout(aiTurn, 500);
   }
 
-  function aiTurn() {
+  /* `keepRoll` is set when the opponent won the opening throw: those two
+     dice are their first turn, so they must not be thrown away here. */
+  function aiTurn(keepRoll) {
     var s = G.state;
-    if (G.over || twoPlayer() || s.turn !== E.B) return;
+    if (G.over || twoPlayer() || G.phase !== 'playing' || s.turn !== E.B) return;
     G.busy = true;
 
-    var d = E.rollDice();
-    E.setRoll(s, d[0], d[1]);
+    var d;
+    if (keepRoll && s.roll.length) {
+      d = s.roll.slice();
+    } else {
+      d = E.rollDice();
+      E.setRoll(s, d[0], d[1]);
+      logLine(E.B, '<strong>Opponent rolls ' + d[0] + '-' + d[1] + '</strong>' +
+              (d[0] === d[1] ? ' (double)' : ''));
+    }
     G.turnStart = E.clone(s);
-    logLine(E.B, '<strong>Opponent rolls ' + d[0] + '-' + d[1] + '</strong>' + (d[0] === d[1] ? ' (double)' : ''));
     renderPlay();
 
     var plan = AI.choosePlan(s, $('difficulty').value);
@@ -690,8 +792,8 @@
         /* One summary at the end rather than a running commentary — a
            live region that changes five times in two seconds just loses
            the earlier announcements. */
-        announce('Opponent rolled ' + d[0] + ' and ' + d[1] + '. ' +
-                 spoken.join(' ') + ' Your turn.');
+        announce((keepRoll ? 'Opponent plays ' : 'Opponent rolled ') +
+                 d[0] + ' and ' + d[1] + '. ' + spoken.join(' ') + ' Your turn.');
         recordTurn(null, false);   // opponent turns are logged, not graded
         if (checkOver()) return;
         E.endTurn(s);
@@ -795,6 +897,7 @@
       score: G.score,
       over: G.over,
       matchOver: G.matchOver,
+      phase: G.phase,
       log: G.log.slice(0, 60),
       /* Keep the most recent turns only: the review is about the match
          you are in, and this has to fit in localStorage alongside
@@ -844,6 +947,9 @@
     G.busy = false;
     G.score = Store.get('score', { W: 0, B: 0 });
     G.matchOver = !!Store.get('matchOver', false);
+    /* A game saved before the opening roll resumes waiting for it. */
+    G.phase = Store.get('phase', 'playing') === 'opening' ? 'opening' : 'playing';
+    G.opening = null;
     G.log = Store.get('log', []);
     var hist = Store.get('history', []);
     G.history = Array.isArray(hist) ? hist : [];
@@ -1185,7 +1291,7 @@
   show(VIEWS.indexOf(start) >= 0 ? start : 'learn');
 
   /* A game saved mid-AI-turn resumes with the opponent still on move. */
-  if (resumed && !G.over && G.state.turn === E.B) setTimeout(aiTurn, 600);
+  if (resumed && !G.over && G.phase === 'playing' && G.state.turn === E.B) setTimeout(aiTurn, 600);
 
   /* Belt and braces for phones, where the tab is often killed rather
      than closed. */

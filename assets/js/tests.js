@@ -891,7 +891,7 @@
   describe('Themes');
 
   (function () {
-    var THEMES = ['vortex', 'nova', 'qahwa'];
+    var THEMES = ['vortex', 'nova', 'novaplus', 'mono', 'qahwa'];
 
     /* Every colour the app draws must come from one of these. A theme
        that leaves one out inherits the previous theme's value and looks

@@ -225,6 +225,31 @@ input, select, textarea {
   font-size: 0.9rem; font-family: inherit;
   transition: border-color .15s, box-shadow .15s;
 }
+
+/* A native select keeps the OS chrome — grey box, grey arrow — and
+   ignores the theme entirely. Strip the appearance and draw our own
+   chevron so the control actually follows the palette. The option list
+   itself is drawn by the OS; colouring `option` is the only lever we
+   have over it, and it is honoured on Windows and Linux Chrome. */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 1.9rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    right 1.05rem center,
+    right 0.75rem center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+select option {
+  background: var(--surface);
+  color: var(--text);
+}
 input:focus, select:focus, textarea:focus {
   outline: none; border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-glow);
