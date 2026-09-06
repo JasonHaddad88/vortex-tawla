@@ -72,12 +72,14 @@
     var base = turnStart || state;
     return {
       v: 1,
+      variant: state.variantId || 'mahbooseh',
       turn: base.turn,
       board: pointsToSpec(base.points),
       off: { W: base.off.W, B: base.off.B },
+      bar: { W: base.bar.W, B: base.bar.B },
       roll: turnStart ? state.roll.slice() : null,
       played: turnStart ? state.played.map(function (m) {
-        return { from: m.from, to: m.to, die: m.die, off: !!m.off };
+        return { from: m.from, to: m.to, die: m.die, off: !!m.off, enter: !!m.enter };
       }) : [],
       opts: { manaEndsGame: !!state.opts.manaEndsGame }
     };
@@ -87,13 +89,19 @@
   function deserialiseGame(g) {
     if (!g || g.v !== 1 || !g.board) return null;
     try {
-      var st = E.fromSpec(g.board, g.turn, g.opts || {});
+      var o = g.opts || {};
+      o.variant = g.variant || 'mahbooseh';
+      if (!E.VARIANTS[o.variant]) return null;
+      o.bar = g.bar || { W: 0, B: 0 };
+
+      var st = E.fromSpec(g.board, g.turn, o);
       st.off.W = g.off.W; st.off.B = g.off.B;
+      st.bar.W = o.bar.W || 0; st.bar.B = o.bar.B || 0;
 
       /* fromSpec infers off from the checker count; a saved game must
-         still add up to 15 a side or something is wrong with the blob. */
-      if (E.countOn(st.points, 'W') + st.off.W !== 15) return null;
-      if (E.countOn(st.points, 'B') + st.off.B !== 15) return null;
+         still add up to 15 a side, bar included, or the blob is wrong. */
+      if (E.countOn(st.points, 'W') + st.off.W + st.bar.W !== 15) return null;
+      if (E.countOn(st.points, 'B') + st.off.B + st.bar.B !== 15) return null;
 
       if (!g.roll || !g.roll.length) return { state: st, turnStart: null };
 

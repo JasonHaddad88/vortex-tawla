@@ -1,11 +1,18 @@
 # Vortex Tawla
 
-An interactive trainer for **Tawleh** (طاولة), starting with **Mahbooseh** (محبوسة) — the
-Levantine trapping game, known elsewhere as Greek *plakoto* or Turkish *mahbusa*.
+An interactive trainer for **Tawleh** (طاولة), the Levantine backgammon family.
 
-Twelve lessons, a playable board with a real rules engine and an opponent, a coach that reviews
-every turn you play, five graded drills, and a glossary with the Persian-derived dice calls.
-Your game, match score and progress survive a refresh.
+Two of the three games of a session are playable:
+
+- **Mahbooseh** (محبوسة) — the trapping game, known elsewhere as Greek *plakoto* or Turkish
+  *mahbusa*. Twelve lessons.
+- **Fransawiyyeh** (فرنساوية) — international backgammon, with hitting, the bar and the
+  backgammon triple. Six lessons.
+- **Gulbahar** (چول بارا) — not implemented yet; see the note at the end.
+
+A playable board with a real rules engine and an opponent, a coach that reviews every turn, five
+graded drills, and a glossary with the Persian-derived dice calls. Your game, match score and
+progress survive a refresh, and it installs as an offline app.
 
 Styled to match the rest of the Vortex family — the palette and component CSS are ported from
 VortexPortal's `hub/templates.py`, the same source Vortex Tension copies.
@@ -48,20 +55,32 @@ server for you.
 
 ## How the engine models the board
 
-Points are numbered absolutely, always from White's point of view:
+`points` is indexed 1..24 in absolute screen order, always as White sees it:
 
 ```
-13 14 15 16 17 18 | 19 20 21 22 23 24    <- Black's home
-12 11 10  9  8  7 |  6  5  4  3  2  1    <- White's home
+13 14 15 16 17 18 | 19 20 21 22 23 24
+12 11 10  9  8  7 |  6  5  4  3  2  1
 ```
 
-White starts with 15 checkers on point 24 and runs 24 → 1; Black starts on point 1 and runs
-1 → 24. Each point is stored as an **array of colours, bottom first**.
+Everything else is expressed in a player's **own** numbering, where 24 is their starting corner and
+1 is the last point before they bear off. `variant.own(p, i)` converts absolute to own and
+`variant.abs(p, k)` back again — and a checker's own-number **is** its pip count, which is why the
+rest of the engine can talk about movement without caring which direction a player travels or
+where their home board sits.
+
+That is the seam the games hang off. A variant supplies `own`/`abs`, a `setup`, a `canLand`, and a
+`score`, plus the flags `pins` / `hits` / `hasBar`; move generation, the maximal-dice rule, the
+plan enumeration, the renderer and the whole app shell are shared. Adding Gulbahar means adding
+one more entry — its same-direction travel is just a different `own`/`abs` pair, which is why
+those exist rather than a hardcoded direction.
+
+Each point is stored as an **array of colours, bottom first**.
 
 That one representation gives pinning for free. Only the contiguous top run of same-coloured
 checkers is ever mobile, so a checker with an enemy above it simply generates no moves — which is
 exactly what *mahboos* means. It also handles the "sandwich" (you pin the checker that is pinning
-yours) without any special case.
+yours) without any special case. In Fransawiyyeh, where you hit rather than pin, a point only ever
+holds one colour and the array degenerates to a plain stack.
 
 Two rules are worth knowing about if you touch the code:
 
@@ -90,13 +109,16 @@ Two things, both built on `AI.evaluate` so the coach and the opponent never disa
   is amber; leaving your last checker alone on your own starting point is red, because that is the
   mana and it loses the game outright.
 
-One evaluator note worth keeping in mind if you tune the weights. Ordinary backgammon likes an
-anchor in the opponent's home board; Mahbooseh does not, because you cannot be hit there — only
-pinned — and you must eventually break the point. The evaluator therefore taxes checkers still
-sitting on your own starting point, and prices a lone mother checker as *the chance it gets
-pinned* times what the mana is worth, counting every opponent checker still short of that point as
-a future shot rather than only the immediate direct shots. Without that last part the engine
-happily strands the mother checker early, while the opponent is still out of range.
+One evaluator note worth keeping in mind if you tune the weights, because the two games want
+opposite things in the same place. **Fransawiyyeh likes an anchor in the opponent's home board** —
+it is somewhere safe to land and a base to hit from. **Mahbooseh does not**, because you cannot be
+hit there, only pinned, and you must eventually break the point. So under Mahbooseh the evaluator
+taxes checkers still sitting on your own starting point, and prices a lone mother checker as *the
+chance it gets pinned* times what the mana is worth, counting every opponent checker still short of
+that point as a future shot rather than only the immediate direct shots. Without that last part the
+engine happily strands the mother checker early, while the opponent is still out of range. Under
+Fransawiyyeh those terms are switched off entirely and exposure is priced as *chance of being hit*
+times *the pips the blot would lose*, since a hit checker restarts from 25.
 
 `tests.js` asserts the evaluator's preferred line agrees with every drill's stated answer, so the
 app cannot tell a learner two different things.
@@ -155,11 +177,21 @@ cleanup on activate, cross-origin and non-GET passthrough, network-first navigat
 fallback for deep links, cache-first assets with background revalidation, and that error responses
 are never cached as if they were the real file.
 
-Current status: **214 browser assertions and 27 service-worker assertions, 0 failing.**
+Fransawiyyeh has its own group covering the setup (checked against the well-known 167 opening pip
+count, which only lands if the geometry is right), hitting and the bar, forced re-entry, the closed
+board, bear-off being blocked while anything is on the bar, gammon and backgammon scoring, and 25
+self-played games checked for checker drift across the bar.
 
-## Adding the other games
+Current status: **293 browser assertions and 27 service-worker assertions, 0 failing.**
 
-`Fransawiyyeh` (international backgammon, with hitting and a bar) and `Gulbahar` need a different
-`canLand` / `applyOn` pair and a different opening, but can reuse the plan enumeration, the board
-renderer and the whole app shell. The cleanest seam is to make `engine.js` export a variant object
-that supplies `newGame`, `canLand` and `applyOn`, and leave everything else generic.
+## Still to do: Gulbahar
+
+`Gulbahar` (چول بارا, also Gul Bara) is the third game of a session and is not implemented. The
+engine seam is ready for it — both players travel the same way round the board, which is only a
+different `own`/`abs` pair — but its rules vary noticeably from table to table, and getting them
+wrong in a teaching app is worse than leaving them out. The two points to settle before writing it:
+
+- whether a single enemy checker blocks a point outright (it usually does), and how the
+  "no six consecutive points" restriction is applied locally;
+- the doubles chain — after rolling doubles you play that number, then continue up through the
+  higher doubles, but tables disagree about the conditions and where it stops.

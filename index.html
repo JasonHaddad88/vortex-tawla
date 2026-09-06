@@ -45,9 +45,10 @@
   <!-- ============================ LEARN ============================ -->
   <section class="view active" id="view-learn">
     <div class="section-head">
-      <h2>Mahbooseh — المحبوسة</h2>
+      <h2 id="learn-title">Mahbooseh — المحبوسة</h2>
       <span class="muted" style="font-size:.78rem" id="lesson-progress"></span>
     </div>
+    <div class="gametabs" id="gametabs"></div>
     <div class="learn-grid">
       <div class="toc" id="toc"></div>
       <div class="card lesson" id="lesson"></div>
@@ -57,8 +58,15 @@
   <!-- ============================= PLAY ============================ -->
   <section class="view" id="view-play">
     <div class="section-head">
-      <h2>Play Mahbooseh</h2>
+      <h2 id="play-title">Play Mahbooseh</h2>
       <div class="row">
+        <label class="field" style="flex-direction:row;align-items:center;gap:.4rem">
+          Game
+          <select id="variant">
+            <option value="mahbooseh" selected>Mahbooseh</option>
+            <option value="fransawiyyeh">Fransawiyyeh</option>
+          </select>
+        </label>
         <label class="field" style="flex-direction:row;align-items:center;gap:.4rem">
           Opponent
           <select id="difficulty">
@@ -113,8 +121,9 @@
           <div class="stat-row"><span class="k">Your pip count</span><span class="v" id="s-pip-w">—</span></div>
           <div class="stat-row"><span class="k">Opponent pip</span><span class="v" id="s-pip-b">—</span></div>
           <div class="stat-row"><span class="k">Borne off</span><span class="v" id="s-off">0 – 0</span></div>
-          <div class="stat-row"><span class="k">You have pinned</span><span class="v" id="s-pins-w">0</span></div>
-          <div class="stat-row"><span class="k">You are pinned</span><span class="v" id="s-pins-b">0</span></div>
+          <div class="stat-row" id="row-bar" hidden><span class="k">On the bar</span><span class="v" id="s-bar">0 – 0</span></div>
+          <div class="stat-row" id="row-pins-w"><span class="k">You have pinned</span><span class="v" id="s-pins-w">0</span></div>
+          <div class="stat-row" id="row-pins-b"><span class="k">You are pinned</span><span class="v" id="s-pins-b">0</span></div>
           <div class="stat-row"><span class="k">Match score</span><span class="v" id="s-score">0 – 0</span></div>
         </div>
 

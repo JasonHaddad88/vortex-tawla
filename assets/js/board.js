@@ -87,7 +87,7 @@
       for (var c = 0; c < list.length; c++) {
         var n = list[c];
         if (n === 'bar') {
-          if (isTop) el('div', 'bar', board);   // spans both rows
+          if (isTop) addBar(board, state, opts, targets);   // spans both rows
           continue;
         }
         var pt = el('div', pointClasses(n, isTop), board);
@@ -149,6 +149,42 @@
     return board;
   }
 
+  /* The centre spine. In Mahbooseh it is pure decoration — nothing is
+     ever sent back — so it only becomes interactive for variants that
+     actually have a bar. */
+  function addBar(board, state, opts, targets) {
+    var bar = el('div', 'bar', board);
+    var v = E.variantOf(state);
+    if (!v.hasBar) return bar;
+    bar.classList.add('live');
+
+    [['B', 'b', 'up'], ['W', 'w', 'down']].forEach(function (cfg) {
+      var n = state.bar[cfg[0]];
+      if (!n) return;
+      var stack = el('div', 'barstack ' + cfg[2], bar);
+      for (var i = 0; i < Math.min(n, 4); i++) el('div', 'chk ' + cfg[1], stack);
+      if (n > 4) el('div', 'barcount', stack).textContent = '+' + (n - 4);
+    });
+
+    /* Checkers on the bar must come back before anything else moves, so
+       when the bar is the only legal source we say so loudly. */
+    if (opts.sources && opts.sources.indexOf('bar') >= 0) {
+      bar.classList.add('movable');
+      if (opts.selected === 'bar') bar.classList.add('selected');
+      if (opts.interactive) {
+        bar.classList.add('clickable');
+        bar.tabIndex = 0;
+        bar.setAttribute('role', 'button');
+        bar.setAttribute('aria-label', 'Re-enter from the bar');
+        bar.addEventListener('click', function () { opts.onPoint && opts.onPoint('bar'); });
+        bar.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); opts.onPoint && opts.onPoint('bar'); }
+        });
+      }
+    }
+    return bar;
+  }
+
   function placeCheckers(cell, state) {
     var stack = state.points[cell.n];
     var n = stack.length;
@@ -195,10 +231,12 @@
   }
 
   /* Static diagram for lessons and drills. `spec` is the compact
-     bottom-first form understood by Engine.fromSpec. */
+     bottom-first form understood by Engine.fromSpec; `opts.variant` and
+     `opts.bar` are passed through to it so a diagram can show a bar. */
   function diagram(host, spec, opts) {
-    var st = E.fromSpec(spec);
-    return render(host, st, Object.assign({ interactive: false }, opts || {}));
+    opts = opts || {};
+    var st = E.fromSpec(spec, 'W', { variant: opts.variant, bar: opts.bar });
+    return render(host, st, Object.assign({ interactive: false }, opts));
   }
 
   root.Board = { render: render, diagram: diagram, die: die, TOP: TOP, BOT: BOT };

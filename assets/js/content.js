@@ -404,6 +404,188 @@ letting go generally is. And the loser sets the board up for the next game.</p>
   ];
 
   /* ------------------------------------------------------------------ */
+  /* Fransawiyyeh — the second game of a session.                        */
+
+  var FR_OPENING = '{"24":"WW","13":"WWWWW","8":"WWW","6":"WWWWW","1":"BB","12":"BBBBB","17":"BBB","19":"BBBBB"}';
+
+  var FR_LESSONS = [
+    {
+      id: 'fr-what',
+      title: 'The French game',
+      arabic: 'فرنساوية',
+      html: `
+<p><strong>Fransawiyyeh</strong> (فرنساوية) is international backgammon — the game the rest of the
+world simply calls backgammon. It is the second of the three games in a Tawleh session, and it is
+the one most people learn first outside the Levant.</p>
+
+<p>If you have worked through Mahbooseh, four things change:</p>
+
+<ul>
+  <li><strong>The setup is spread out.</strong> Instead of one tower of fifteen, your checkers
+      start on four different points.</li>
+  <li><strong>You hit instead of trapping.</strong> Landing on a lone enemy checker sends it
+      <em>off the board</em> to the bar, not underneath yours.</li>
+  <li><strong>There is a bar,</strong> and anything on it must come all the way back before its
+      owner may move anything else.</li>
+  <li><strong>There is a third result.</strong> Beyond the single and the double there is a
+      <em>backgammon</em>, worth three.</li>
+</ul>
+
+<div class="callout cyan">
+  <span class="h">What stays the same</span>
+  The direction of travel, the dice, the rule that you must use both numbers if you can, the way
+  points are blocked by two or more checkers, and bearing off. Everything you learned about the
+  race carries straight over.
+</div>
+`
+    },
+
+    {
+      id: 'fr-setup',
+      title: 'The setup and the race',
+      arabic: 'الترتيب',
+      html: `
+<div class="diagram" data-spec='${FR_OPENING}' data-variant="fransawiyyeh" data-cap="The Fransawiyyeh opening: two on 24, five on 13, three on 8, five on 6 — and your opponent exactly mirrored."></div>
+
+<p>Reading your own checkers from the far corner: <strong>two on 24, five on 13, three on 8, and
+five on 6</strong>. Your opponent's position is the mirror image.</p>
+
+<p>Add it up — 2×24 + 5×13 + 3×8 + 5×6 — and you get <strong>167 pips</strong> each. That number is
+worth memorising: it is the reference point every race calculation starts from. The Play view
+shows both pip counts live, so you can always see who is ahead.</p>
+
+<div class="callout">
+  <span class="h">The names of the points</span>
+  Your <strong>midpoint</strong> is 13, the stack of five in enemy territory. Your
+  <strong>golden point</strong> is 5 — the single most valuable point on the board to own. The two
+  checkers on 24 are your <strong>back checkers</strong>, and getting them home safely is the
+  central problem of the opening.
+</div>
+`
+    },
+
+    {
+      id: 'fr-hitting',
+      title: 'Hitting and the bar',
+      arabic: 'الضرب',
+      html: `
+<p>A point with exactly one checker on it is a <strong>blot</strong>. Land on an enemy blot and you
+<strong>hit</strong> it: the checker comes off the board entirely and goes on the <strong>bar</strong>,
+the ridge down the middle.</p>
+
+<div class="diagram" data-spec='{"13":"WWWWW","9":"B","8":"WWW","6":"WWWWW","4":"WW","1":"BB","12":"BBBB","17":"BBB","19":"BBBBB"}' data-variant="fransawiyyeh" data-cap="Before: a lone cyan checker on point 9. Purple on 13 hits it with a 4."></div>
+
+<div class="diagram" data-spec='{"13":"WWWW","9":"W","8":"WWW","6":"WWWWW","4":"WW","1":"BB","12":"BBBB","17":"BBB","19":"BBBBB"}' data-bar='{"B":1}' data-variant="fransawiyyeh" data-cap="After: the cyan checker is on the bar, shown in the centre spine. It now owes the full 25 pips."></div>
+
+<div class="callout warn">
+  <span class="h">This is the real difference</span>
+  In Mahbooseh a trapped checker stays where it is and simply cannot move. In Fransawiyyeh it is
+  sent all the way back to the start — it owes <strong>25 pips</strong> again, however far it had
+  travelled. Hitting a checker on your own 1-point costs your opponent almost nothing; hitting one
+  that was nearly home is devastating.
+</div>
+
+<p>So a hit is not just an annoyance, it is the main way of winning the race from behind. And it
+cuts both ways: every blot you leave is a chance for your opponent to do the same to you.</p>
+`
+    },
+
+    {
+      id: 'fr-bar',
+      title: 'Re-entering, and the closed board',
+      arabic: 'الحاجز',
+      html: `
+<p>While you have a checker on the bar you <strong>may not move anything else</strong>. It must
+come back in first, and it re-enters in your opponent's home board — the quadrant you started
+from.</p>
+
+<ul>
+  <li>A <strong>1</strong> enters on your 24-point, a <strong>2</strong> on your 23, and so on up
+      to a <strong>6</strong> on your 19.</li>
+  <li>You can only enter on a point that is open: empty, yours, or holding a single enemy checker —
+      which you hit on the way in.</li>
+  <li>If none of your numbers are open, you forfeit the whole turn. This is called
+      <strong>dancing</strong>, and it is exactly as frustrating as it sounds.</li>
+  <li>With two dice you must enter both checkers before anything else moves.</li>
+</ul>
+
+<div class="diagram" data-spec='{"24":"BB","23":"BB","22":"BB","21":"BB","20":"BB","19":"BBBBB","13":"WWWWW","8":"WWW","6":"WWWWW","4":"W"}' data-bar='{"W":1}' data-variant="fransawiyyeh" data-cap="A closed board. All six of cyan's home points are made, so the purple checker on the bar cannot enter on any number and forfeits every turn until a point opens."></div>
+
+<div class="callout">
+  <span class="h">Why the home board matters so much</span>
+  Every point you make in your own home board is one fewer number your opponent can enter on. Make
+  all six and they cannot move at all until you are forced to break one. That is why "build your
+  home board" is the advice behind almost every good Fransawiyyeh move.
+</div>
+`
+    },
+
+    {
+      id: 'fr-primes',
+      title: 'Points, primes and anchors',
+      arabic: 'السد',
+      html: `
+<p>Two checkers on a point make it yours: the opponent cannot land there or pass through it as the
+middle stop of a two-leg move. Six such points in a row make a <strong>prime</strong>, and nothing
+can jump it with a single die.</p>
+
+<div class="diagram" data-spec='{"9":"WW","8":"WW","7":"WW","6":"WW","5":"WW","4":"WW","13":"WWW","1":"BBBBB","2":"BBBBB","3":"BBBBB"}' data-variant="fransawiyyeh" data-cap="A full prime from 4 to 9. Every cyan checker is behind it and none of them can get out until purple is forced to break it up."></div>
+
+<p>The mirror of a prime is an <strong>anchor</strong>: a point of your own inside the opponent's
+home board. Here the two games disagree sharply.</p>
+
+<div class="callout warn">
+  <span class="h">An anchor is good here — and bad in Mahbooseh</span>
+  In Fransawiyyeh an anchor is a safe landing square and a base to hit from, so holding your
+  24-point or, better, your 20-point is genuinely valuable. In Mahbooseh the same square is a
+  liability: you cannot be hit there, only pinned, and you must eventually break the point, which
+  is how you lose the mana. Same two checkers, opposite advice. The app's coach knows the
+  difference and grades each game on its own terms.
+</div>
+
+<p>Practical priorities in the opening: make your <strong>5-point</strong> if you can, make your
+<strong>bar point</strong> (7) next, keep your back checkers safe on an anchor until there is
+somewhere to run to, and avoid leaving blots your opponent can hit with a direct number.</p>
+`
+    },
+
+    {
+      id: 'fr-scoring',
+      title: 'Bearing off, and the three results',
+      arabic: 'الحساب',
+      html: `
+<p>Bearing off works exactly as in Mahbooseh: get all fifteen checkers into your home board, then a
+die matching a point's number takes a checker off it, and a die higher than any point you still
+occupy takes one off your highest.</p>
+
+<div class="diagram" data-spec='{"6":"WW","5":"WWW","4":"WWW","3":"WWW","2":"WW","1":"WW","19":"BBBBB","20":"BBBBB","21":"BBBBB"}' data-variant="fransawiyyeh" data-cap="All fifteen home and ready to bear off. Cyan is doing the same at the other end — this one is a pure race."></div>
+
+<div class="callout warn">
+  <span class="h">One rule that catches people</span>
+  If you are hit while bearing off, that checker goes to the bar and must travel all the way round
+  again — and you cannot take another checker off until it is home. Leaving a blot in your home
+  board while your opponent still has an anchor there loses games that were already won.
+</div>
+
+<p>The three results:</p>
+
+<ul>
+  <li><strong>Single</strong> — 1 point. The loser got at least one checker off.</li>
+  <li><strong>Gammon</strong> — 2 points. The loser bore off nothing.</li>
+  <li><strong>Backgammon</strong> — 3 points. The loser bore off nothing <em>and</em> still has a
+      checker on the bar or in the winner's home board.</li>
+</ul>
+
+<div class="callout cyan">
+  <span class="h">Compare with Mahbooseh</span>
+  Mahbooseh tops out at the mars, worth two. Fransawiyyeh has the extra tier, which is why
+  saving a gammon — racing one checker home when the game is already lost — matters even more here.
+</div>
+`
+    }
+  ];
+
+  /* ------------------------------------------------------------------ */
 
   var GLOSSARY = [
     { t: 'Tawleh', ar: 'طاولة', d: 'The board and the whole family of games played on it. Literally "table".' },
@@ -480,5 +662,15 @@ letting go generally is. And the loser sets the board up for the next game.</p>
     }
   ];
 
-  root.Content = { LESSONS: LESSONS, GLOSSARY: GLOSSARY, DRILLS: DRILLS };
+  /* Lessons are grouped by game so the Learn view can switch between
+     them; Gulbahar joins this list when its rules go in. */
+  var GAMES = [
+    { id: 'mahbooseh',    name: 'Mahbooseh',    arabic: 'محبوسة',  lessons: LESSONS },
+    { id: 'fransawiyyeh', name: 'Fransawiyyeh', arabic: 'فرنساوية', lessons: FR_LESSONS }
+  ];
+
+  root.Content = {
+    LESSONS: LESSONS, FR_LESSONS: FR_LESSONS, GAMES: GAMES,
+    GLOSSARY: GLOSSARY, DRILLS: DRILLS
+  };
 })(typeof window !== 'undefined' ? window : globalThis);

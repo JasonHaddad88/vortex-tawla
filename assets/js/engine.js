@@ -1,32 +1,48 @@
 /* =====================================================================
- * Vortex Tawla — Mahbooseh rules engine
+ * Vortex Tawla — rules engine
  * ---------------------------------------------------------------------
  * Pure logic, zero DOM. Loaded as a classic script so the whole app also
  * runs straight off the filesystem (file://) with no build step.
  *
- * Board numbering is ABSOLUTE, always from White's point of view:
+ * ---------------------------------------------------------------------
+ * BOARD NUMBERING
  *
- *      13 14 15 16 17 18 | 19 20 21 22 23 24   <- Black's home (19-24)
- *      12 11 10  9  8  7 |  6  5  4  3  2  1   <- White's home (1-6)
+ * `points` is indexed 1..24 in ABSOLUTE screen order, always as White
+ * sees it:
  *
- *   White starts with 15 checkers on point 24 and runs 24 -> 1.
- *   Black starts with 15 checkers on point  1 and runs  1 -> 24.
+ *      13 14 15 16 17 18 | 19 20 21 22 23 24
+ *      12 11 10  9  8  7 |  6  5  4  3  2  1
  *
- * A point is stored as an array of colours, BOTTOM first. That single
- * choice gives us pinning for free: only the top run of same-coloured
+ * Everything else is expressed in a player's OWN numbering, where 24 is
+ * their starting corner and 1 is the last point before they bear off.
+ * `variant.own(p, i)` converts absolute to own, `variant.abs(p, k)` back
+ * again — and a checker's own-number IS its pip count, which is why the
+ * rest of the engine can talk about movement without caring which
+ * direction a player travels or where their home board sits.
+ *
+ * That is the seam the game variants hang off:
+ *
+ *   Mahbooseh     opposed directions, trapping, no bar
+ *   Fransawiyyeh  opposed directions, hitting, bar and re-entry
+ *   Gulbahar      same rotational direction (not implemented yet)
+ *
+ * ---------------------------------------------------------------------
+ * STACKS
+ *
+ * A point is an array of colours, BOTTOM first. That gives Mahbooseh's
+ * pinning for free: only the contiguous top run of same-coloured
  * checkers can ever move, so anything buried underneath is "mahboos"
- * (imprisoned) and simply has no legal moves until it is uncovered.
+ * (imprisoned) and simply generates no moves. It also handles the
+ * sandwich — pinning the checker that is pinning yours — with no special
+ * case. In variants that hit rather than pin, a point only ever holds
+ * one colour and the array degenerates to a plain stack.
  * ===================================================================== */
 (function (root) {
   'use strict';
 
   var W = 'W', B = 'B';
 
-  function opp(p)        { return p === W ? B : W; }
-  function dir(p)        { return p === W ? -1 : 1; }
-  function pipOf(p, pt)  { return p === W ? pt : 25 - pt; }
-  function inHome(p, pt) { return pipOf(p, pt) >= 1 && pipOf(p, pt) <= 6; }
-  function startPoint(p) { return p === W ? 24 : 1; }
+  function opp(p) { return p === W ? B : W; }
 
   /* ---------------------------------------------------------------- */
   /* Board primitives                                                  */
@@ -44,9 +60,9 @@
     return a;
   }
 
-  /* The contiguous run of same-coloured checkers sitting on top of a
-     point. This is the only part of a stack that is ever mobile, and the
-     only part that matters when deciding whether you may land there. */
+  /* The contiguous run of same-coloured checkers on top of a point: the
+     only part of a stack that is ever mobile, and the only part that
+     matters when deciding whether you may land there. */
   function topRun(pts, i) {
     var a = pts[i];
     if (!a || a.length === 0) return { color: null, len: 0 };
@@ -55,14 +71,104 @@
     return { color: c, len: n };
   }
 
-  /* Mahbooseh has no hitting: you either own the point, or you trap a
-     lone enemy checker by sitting on top of it, or you are shut out. */
-  function canLand(pts, p, i) {
+  /* ---------------------------------------------------------------- */
+  /* Variants                                                          */
+  /* ---------------------------------------------------------------- */
+
+  /* Opposed travel, as in Mahbooseh and Fransawiyyeh: White runs 24->1
+     and Black runs 1->24, so Black's own numbering is White's mirrored. */
+  function opposedOwn(p, i) { return p === W ? i : 25 - i; }
+  function opposedAbs(p, k) { return p === W ? k : 25 - k; }
+
+  /* Landing where a lone enemy checker sits is allowed (it gets pinned
+     or hit, depending on the variant); two or more shut you out. */
+  function canLandContact(pts, p, i) {
     var run = topRun(pts, i);
-    if (run.len === 0) return true;        // empty point
-    if (run.color === p) return true;      // our own stack
-    return run.len === 1;                  // lone blot -> we pin it
+    if (run.len === 0) return true;
+    if (run.color === p) return true;
+    return run.len === 1;
   }
+
+  var VARIANTS = {
+
+    mahbooseh: {
+      id: 'mahbooseh',
+      name: 'Mahbooseh',
+      arabic: 'محبوسة',
+      blurb: 'No hitting. Land on a lone enemy checker and it is trapped underneath yours.',
+      hasBar: false,
+      pins: true,
+      hits: false,
+      own: opposedOwn,
+      abs: opposedAbs,
+      canLand: canLandContact,
+      /* All fifteen on the far corner, inside the opponent's home. */
+      setup: function (pts) {
+        for (var i = 0; i < 15; i++) { pts[24].push(W); pts[1].push(B); }
+      },
+      /* Single game, or a mars (double) if the loser bore off nothing. */
+      score: function (s, winner) {
+        return s.off[opp(winner)] === 0
+          ? { points: 2, reason: 'mars' }
+          : { points: 1, reason: 'single' };
+      }
+    },
+
+    fransawiyyeh: {
+      id: 'fransawiyyeh',
+      name: 'Fransawiyyeh',
+      arabic: 'فرنساوية',
+      blurb: 'International backgammon. Hit a lone enemy checker and it goes to the bar.',
+      hasBar: true,
+      pins: false,
+      hits: true,
+      own: opposedOwn,
+      abs: opposedAbs,
+      canLand: canLandContact,
+      /* The standard opening, in own-numbering: 24×2, 13×5, 8×3, 6×5. */
+      setup: function (pts, v) {
+        [[24, 2], [13, 5], [8, 3], [6, 5]].forEach(function (pair) {
+          for (var i = 0; i < pair[1]; i++) {
+            pts[v.abs(W, pair[0])].push(W);
+            pts[v.abs(B, pair[0])].push(B);
+          }
+        });
+      },
+      /* Backgammon (triple) if the loser bore off nothing AND still has a
+         checker on the bar or stuck in the winner's home board. */
+      score: function (s, winner) {
+        var loser = opp(winner);
+        if (s.off[loser] > 0) return { points: 1, reason: 'single' };
+        var stranded = s.bar[loser] > 0;
+        if (!stranded) {
+          for (var i = 1; i <= 24 && !stranded; i++) {
+            if (this.own(winner, i) > 18) continue;   // not winner's home
+            for (var k = 0; k < s.points[i].length; k++)
+              if (s.points[i][k] === loser) { stranded = true; break; }
+          }
+        }
+        return stranded
+          ? { points: 3, reason: 'backgammon' }
+          : { points: 2, reason: 'gammon' };
+      }
+    }
+  };
+
+  var DEFAULT = VARIANTS.mahbooseh;
+  function V(v) { return v || DEFAULT; }
+
+  /* ---------------------------------------------------------------- */
+  /* Geometry, in the current variant's terms                          */
+  /* ---------------------------------------------------------------- */
+
+  /* A checker's own-number is exactly the pips it still owes. */
+  function pipOf(p, i, v) { return V(v).own(p, i); }
+  function inHome(p, i, v) { var k = V(v).own(p, i); return k >= 1 && k <= 6; }
+  function startPoint(p, v) { return V(v).abs(p, 24); }
+  /* Entering from the bar lands in the opponent's home: own 19..24. */
+  function entryPoint(p, die, v) { return V(v).abs(p, 25 - die); }
+
+  function canLand(pts, p, i, v) { return V(v).canLand(pts, p, i); }
 
   function countOn(pts, p) {
     var n = 0;
@@ -71,32 +177,38 @@
     return n;
   }
 
-  function pipCount(pts, p) {
+  function pipCount(pts, p, v, bar) {
     var n = 0;
     for (var i = 1; i <= 24; i++)
-      for (var k = 0; k < pts[i].length; k++) if (pts[i][k] === p) n += pipOf(p, i);
+      for (var k = 0; k < pts[i].length; k++) if (pts[i][k] === p) n += pipOf(p, i, v);
+    /* A checker on the bar has the whole board to cross: 25 pips. */
+    if (bar && bar[p]) n += bar[p] * 25;
     return n;
   }
 
-  /* Every checker home? Pinned checkers count too — that is precisely
-     why one trapped checker can stop you bearing off all game. */
-  function allHome(pts, p) {
+  /* Every checker home? Pinned checkers count, and so does the bar —
+     which is exactly why one trapped checker stops bear-off all game. */
+  function allHome(pts, p, v, bar) {
+    if (bar && bar[p] > 0) return false;
     for (var i = 1; i <= 24; i++) {
-      if (inHome(p, i)) continue;
+      if (inHome(p, i, v)) continue;
       for (var k = 0; k < pts[i].length; k++) if (pts[i][k] === p) return false;
     }
     return true;
   }
 
-  function hasHigherThan(pts, p, pip) {
+  function hasHigherThan(pts, p, pip, v) {
     for (var i = 1; i <= 24; i++) {
-      if (pipOf(p, i) <= pip) continue;
+      if (pipOf(p, i, v) <= pip) continue;
       for (var k = 0; k < pts[i].length; k++) if (pts[i][k] === p) return true;
     }
     return false;
   }
 
-  /* Enemy checkers we currently hold pinned, listed by point. */
+  /* ---------------------------------------------------------------- */
+  /* Contact analysis                                                  */
+  /* ---------------------------------------------------------------- */
+
   function pinsHeldBy(pts, p) {
     var out = [];
     for (var i = 1; i <= 24; i++) {
@@ -108,7 +220,6 @@
     return out;
   }
 
-  /* Our own checkers that cannot move because someone sits on them. */
   function pinnedCheckers(pts, p) {
     var out = [];
     for (var i = 1; i <= 24; i++) {
@@ -121,10 +232,10 @@
   }
 
   /* The "mana" (mother): p holds the opponent's LAST checker trapped on
-     the opponent's own starting point. That checker can never come home,
-     so the opponent cannot bear off for as long as the pin is held. */
-  function manaHeldBy(pts, p) {
-    var q = startPoint(opp(p)), a = pts[q];
+     the opponent's own starting point, so it can never come home. */
+  function manaHeldBy(pts, p, v) {
+    if (!V(v).pins) return false;
+    var q = startPoint(opp(p), v), a = pts[q];
     if (a.length < 2) return false;
     if (a[0] !== opp(p)) return false;
     if (topRun(pts, q).color !== p) return false;
@@ -133,7 +244,6 @@
     return n === 1;
   }
 
-  /* A blot is a lone checker of ours with nothing of ours above it. */
   function blots(pts, p) {
     var out = [];
     for (var i = 1; i <= 24; i++) {
@@ -143,12 +253,13 @@
     return out;
   }
 
-  /* How many of the six dice faces let `by` land on point q right now. */
-  function directShots(pts, by, q) {
-    var n = 0;
+  /* How many of the six faces let `by` land on point q right now. */
+  function directShots(pts, by, q, v) {
+    var n = 0, target = pipOf(by, q, v);
     for (var d = 1; d <= 6; d++) {
-      var s = q - dir(by) * d;
-      if (s < 1 || s > 24) continue;
+      var k = target + d;                     // the point d pips behind it
+      if (k > 24) continue;
+      var s = V(v).abs(by, k);
       if (topRun(pts, s).color === by) n++;
     }
     return n;
@@ -165,42 +276,69 @@
     return out;
   }
 
-  /* Single-die moves available right now. to === 0 (White) or 25 (Black)
-     means bearing off. */
-  function genMoves(pts, p, remaining) {
-    var out = [], dice = uniq(remaining), home = allHome(pts, p);
-    for (var di = 0; di < dice.length; di++) {
-      var d = dice[di];
+  /* Single-die moves available right now. `from === 'bar'` is a re-entry;
+     `to === 0` means bearing off. */
+  function genMoves(pts, p, remaining, v, bar) {
+    v = V(v);
+    var out = [], dice = uniq(remaining), di, d;
+
+    /* Checkers on the bar must all come back before anything else moves. */
+    if (v.hasBar && bar && bar[p] > 0) {
+      for (di = 0; di < dice.length; di++) {
+        d = dice[di];
+        var e = entryPoint(p, d, v);
+        if (v.canLand(pts, p, e)) out.push({ from: 'bar', to: e, die: d, enter: true });
+      }
+      return out;
+    }
+
+    var home = allHome(pts, p, v, bar);
+    for (di = 0; di < dice.length; di++) {
+      d = dice[di];
       for (var s = 1; s <= 24; s++) {
         if (topRun(pts, s).color !== p) continue;
-        var t = s + dir(p) * d;
-        if (t >= 1 && t <= 24) {
-          if (canLand(pts, p, t)) out.push({ from: s, to: t, die: d });
+        var k = v.own(p, s) - d;
+        if (k >= 1) {
+          var t = v.abs(p, k);
+          if (v.canLand(pts, p, t)) out.push({ from: s, to: t, die: d });
         } else if (home) {
-          /* Running off the end of the board means pip <= d, so this is
-             a bear-off: an exact roll always works, an overshoot only
-             from the highest point we still occupy. */
-          var pip = pipOf(p, s);
-          if (pip === d || !hasHigherThan(pts, p, pip))
-            out.push({ from: s, to: p === W ? 0 : 25, die: d, off: true });
+          /* Running off the end means pip <= d: an exact roll always
+             works, an overshoot only from the highest point we occupy. */
+          var pip = v.own(p, s);
+          if (pip === d || !hasHigherThan(pts, p, pip, v))
+            out.push({ from: s, to: 0, die: d, off: true });
         }
       }
     }
     return out;
   }
 
-  function applyOn(pts, off, p, mv) {
-    var a = pts[mv.from], pinned = false, freed = false;
-    a.pop();
-    if (a.length && a[a.length - 1] === opp(p)) freed = true;
-    if (mv.off) {
-      off[p]++;
+  function applyOn(pts, off, p, mv, v, bar) {
+    v = V(v);
+    var pinned = false, hit = false, freed = false;
+
+    if (mv.enter) {
+      if (bar) bar[p]--;
     } else {
-      var run = topRun(pts, mv.to);
-      if (run.color === opp(p) && run.len === 1) pinned = true;
-      pts[mv.to].push(p);
+      var a = pts[mv.from];
+      a.pop();
+      if (a.length && a[a.length - 1] === opp(p)) freed = true;
     }
-    return { pinned: pinned, freed: freed };
+
+    if (mv.off) { off[p]++; return { pinned: false, hit: false, freed: freed }; }
+
+    var run = topRun(pts, mv.to);
+    if (run.color === opp(p) && run.len === 1) {
+      if (v.hits) {
+        pts[mv.to].pop();                 // send it to the bar
+        if (bar) bar[opp(p)]++;
+        hit = true;
+      } else {
+        pinned = true;                    // sit on it instead
+      }
+    }
+    pts[mv.to].push(p);
+    return { pinned: pinned, hit: hit, freed: freed };
   }
 
   function sameMove(a, b) {
@@ -208,19 +346,19 @@
   }
 
   /* A player with no legal move for ANY of the six faces cannot move on
-     any roll at all — every move is a single-die step, so checking the
-     faces is exact. If BOTH players are dead the position can never
-     change again and the game is drawn.
-     This is reachable for real: if each side holds the other's mana and
-     has piled its remaining checkers onto that same point, nobody can
+     any roll: every move is a single-die step, so checking the faces is
+     exact. If BOTH players are dead the position can never change and
+     the game is drawn.
+     Reachable for real in Mahbooseh: if each side holds the other's mana
+     and has piled its remaining checkers onto that same point, nobody can
      bear off and nobody can move. It is the reason many tables score the
-     mana as an immediate double loss instead of playing it out. */
-  function isDead(pts, p) {
-    return genMoves(pts, p, [1, 2, 3, 4, 5, 6]).length === 0;
+     mana as an immediate double loss. */
+  function isDead(pts, p, v, bar) {
+    return genMoves(pts, p, [1, 2, 3, 4, 5, 6], v, bar).length === 0;
   }
 
-  function isDeadlock(pts) {
-    return isDead(pts, W) && isDead(pts, B);
+  function isDeadlock(pts, v, bar) {
+    return isDead(pts, W, v, bar) && isDead(pts, B, v, bar);
   }
 
   /* All maximal ways to play the roll.
@@ -228,42 +366,42 @@
    * "Use both dice if you can, and if only one is playable play the
    * higher" is a property of the WHOLE turn, not of each move in
    * isolation — playing greedily can strand a die you were obliged to
-   * use. So we enumerate every terminal sequence up front and keep only
-   * the longest; the UI then just walks this plan list. */
-  function enumeratePlans(pts, p, dice) {
+   * use. So enumerate every terminal sequence up front and keep only the
+   * longest; the UI then just walks this plan list. */
+  function enumeratePlans(pts, p, dice, v, bar) {
+    v = V(v);
     var terminal = [], budget = 120000;
 
-    function rec(board, remaining, seq) {
+    function rec(board, bars, remaining, seq) {
       if (budget-- < 0) { terminal.push(seq.slice()); return; }
-      var moves = remaining.length ? genMoves(board, p, remaining) : [];
+      var moves = remaining.length ? genMoves(board, p, remaining, v, bars) : [];
       if (moves.length === 0) { terminal.push(seq.slice()); return; }
       for (var i = 0; i < moves.length; i++) {
         var mv = moves[i];
-        var nb = clonePoints(board), noff = { W: 0, B: 0 };
-        applyOn(nb, noff, p, mv);
+        var nb = clonePoints(board);
+        var nbar = { W: bars.W, B: bars.B };
+        applyOn(nb, { W: 0, B: 0 }, p, mv, v, nbar);
         var rem = remaining.slice();
         rem.splice(rem.indexOf(mv.die), 1);
         seq.push(mv);
-        rec(nb, rem, seq);
+        rec(nb, nbar, rem, seq);
         seq.pop();
       }
     }
-    rec(pts, dice.slice(), []);
+    rec(pts, { W: (bar && bar.W) || 0, B: (bar && bar.B) || 0 }, dice.slice(), []);
 
     var max = 0, i;
     for (i = 0; i < terminal.length; i++) max = Math.max(max, terminal[i].length);
     var plans = terminal.filter(function (s) { return s.length === max; });
 
-    /* Exactly one die playable: it must be the higher one where that is
-       a legal choice. */
+    /* Exactly one die playable: it must be the higher one where that is a
+       legal choice. */
     if (max === 1 && dice.length === 2 && dice[0] !== dice[1]) {
       var hi = Math.max(dice[0], dice[1]);
       var hiPlans = plans.filter(function (s) { return s[0].die === hi; });
       if (hiPlans.length) plans = hiPlans;
     }
 
-    /* Drop duplicate orderings so the UI never offers the same choice
-       twice. */
     var seen = {}, dedup = [];
     for (i = 0; i < plans.length; i++) {
       var k = plans[i].map(function (m) { return m.from + '>' + m.to + ':' + m.die; }).join('|');
@@ -276,12 +414,15 @@
   /* Game state                                                        */
   /* ---------------------------------------------------------------- */
 
-  function makeState(pts, turn, opts) {
+  function makeState(pts, turn, opts, variantId) {
     var o = { manaEndsGame: false };
     if (opts) for (var k in opts) if (Object.prototype.hasOwnProperty.call(opts, k)) o[k] = opts[k];
+    var id = variantId || (opts && opts.variant) || 'mahbooseh';
     return {
+      variantId: VARIANTS[id] ? id : 'mahbooseh',
       points: pts,
       off: { W: 0, B: 0 },
+      bar: { W: 0, B: 0 },
       turn: turn || W,
       roll: [],            // the two faces as thrown
       dice: [],            // values still unplayed this turn
@@ -291,10 +432,14 @@
     };
   }
 
+  function variantOf(s) { return VARIANTS[s && s.variantId] || DEFAULT; }
+
   function newGame(opts) {
+    var id = (opts && opts.variant) || 'mahbooseh';
+    var v = VARIANTS[id] || DEFAULT;
     var pts = emptyPoints();
-    for (var i = 0; i < 15; i++) { pts[24].push(W); pts[1].push(B); }
-    return makeState(pts, (opts && opts.first) || W, opts);
+    v.setup(pts, v);
+    return makeState(pts, (opts && opts.first) || W, opts, v.id);
   }
 
   /* Build a position from a compact spec for lessons and drills:
@@ -306,16 +451,19 @@
       var s = String(spec[k]);
       for (var i = 0; i < s.length; i++) pts[+k].push(s[i] === 'W' ? W : B);
     });
-    var st = makeState(pts, turn || W, opts);
-    st.off.W = 15 - countOn(pts, W);
-    st.off.B = 15 - countOn(pts, B);
+    var st = makeState(pts, turn || W, opts, opts && opts.variant);
+    if (opts && opts.bar) { st.bar.W = opts.bar.W || 0; st.bar.B = opts.bar.B || 0; }
+    st.off.W = 15 - countOn(pts, W) - st.bar.W;
+    st.off.B = 15 - countOn(pts, B) - st.bar.B;
     return st;
   }
 
   function clone(s) {
     return {
+      variantId: s.variantId,
       points: clonePoints(s.points),
       off: { W: s.off.W, B: s.off.B },
+      bar: { W: s.bar.W, B: s.bar.B },
       turn: s.turn,
       roll: s.roll.slice(),
       dice: s.dice.slice(),
@@ -329,7 +477,7 @@
     s.roll = [d1, d2];
     s.dice = (d1 === d2) ? [d1, d1, d1, d1] : [d1, d2];
     s.played = [];
-    s.plans = enumeratePlans(s.points, s.turn, s.dice);
+    s.plans = enumeratePlans(s.points, s.turn, s.dice, variantOf(s), s.bar);
     return s;
   }
 
@@ -363,7 +511,7 @@
   function turnComplete(s) { return legalNow(s).length === 0; }
 
   function apply(s, mv) {
-    var res = applyOn(s.points, s.off, s.turn, mv);
+    var res = applyOn(s.points, s.off, s.turn, mv, variantOf(s), s.bar);
     s.dice.splice(s.dice.indexOf(mv.die), 1);
     s.played.push(mv);
     return res;
@@ -376,23 +524,29 @@
   }
 
   /* Result: null while the game is live, else { winner, points, reason }.
-     A "mars" is a double game — the loser never got a checker off. */
+     winner === null with reason 'deadlock' is a draw. */
   function result(s) {
-    if (s.off.W === 15)
-      return { winner: W, points: s.off.B === 0 ? 2 : 1, reason: s.off.B === 0 ? 'mars' : 'single' };
-    if (s.off.B === 15)
-      return { winner: B, points: s.off.W === 0 ? 2 : 1, reason: s.off.W === 0 ? 'mars' : 'single' };
-    if (s.opts.manaEndsGame) {
-      if (manaHeldBy(s.points, W)) return { winner: W, points: 2, reason: 'mana' };
-      if (manaHeldBy(s.points, B)) return { winner: B, points: 2, reason: 'mana' };
+    var v = variantOf(s);
+    if (s.off.W === 15) {
+      var rw = v.score(s, W);
+      return { winner: W, points: rw.points, reason: rw.reason };
     }
-    if (isDeadlock(s.points)) return { winner: null, points: 0, reason: 'deadlock' };
+    if (s.off.B === 15) {
+      var rb = v.score(s, B);
+      return { winner: B, points: rb.points, reason: rb.reason };
+    }
+    if (s.opts.manaEndsGame && v.pins) {
+      if (manaHeldBy(s.points, W, v)) return { winner: W, points: 2, reason: 'mana' };
+      if (manaHeldBy(s.points, B, v)) return { winner: B, points: 2, reason: 'mana' };
+    }
+    if (isDeadlock(s.points, v, s.bar)) return { winner: null, points: 0, reason: 'deadlock' };
     return null;
   }
 
   root.Engine = {
     W: W, B: B,
-    opp: opp, dir: dir, pipOf: pipOf, inHome: inHome, startPoint: startPoint,
+    VARIANTS: VARIANTS, variantOf: variantOf,
+    opp: opp, pipOf: pipOf, inHome: inHome, startPoint: startPoint, entryPoint: entryPoint,
     emptyPoints: emptyPoints, clonePoints: clonePoints,
     topRun: topRun, canLand: canLand, countOn: countOn, pipCount: pipCount,
     allHome: allHome, pinsHeldBy: pinsHeldBy, pinnedCheckers: pinnedCheckers,

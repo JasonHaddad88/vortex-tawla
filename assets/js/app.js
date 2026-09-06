@@ -50,11 +50,35 @@
   /* ================================================================ */
 
   var lessonIdx = 0;
+  var gameIdx = 0;
+
+  function lessons() { return C.GAMES[gameIdx].lessons; }
+
+  function buildGameTabs() {
+    var host = $('gametabs');
+    host.innerHTML = '';
+    C.GAMES.forEach(function (g, i) {
+      var b = document.createElement('button');
+      b.className = 'gametab' + (i === gameIdx ? ' active' : '');
+      b.innerHTML = g.name + ' <span class="ar">' + g.arabic + '</span>';
+      b.addEventListener('click', function () {
+        if (gameIdx === i) return;
+        gameIdx = i;
+        lessonIdx = 0;
+        buildGameTabs();
+        buildToc();
+        renderLesson();
+        saveProgress();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      host.appendChild(b);
+    });
+  }
 
   function buildToc() {
     var toc = $('toc');
     toc.innerHTML = '';
-    C.LESSONS.forEach(function (l, i) {
+    lessons().forEach(function (l, i) {
       var b = document.createElement('button');
       b.innerHTML = '<span class="n">' + String(i + 1).padStart(2, '0') + '</span><span>' + l.title + '</span>';
       b.addEventListener('click', function () { lessonIdx = i; renderLesson(); saveProgress(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
@@ -63,11 +87,15 @@
   }
 
   function renderLesson() {
-    var l = C.LESSONS[lessonIdx];
+    var list = lessons();
+    if (lessonIdx >= list.length) lessonIdx = 0;
+    var l = list[lessonIdx];
+    var game = C.GAMES[gameIdx];
+    $('learn-title').textContent = game.name + ' — ' + game.arabic;
     Array.prototype.forEach.call($('toc').children, function (b, i) {
       b.classList.toggle('active', i === lessonIdx);
     });
-    $('lesson-progress').textContent = 'Lesson ' + (lessonIdx + 1) + ' of ' + C.LESSONS.length;
+    $('lesson-progress').textContent = 'Lesson ' + (lessonIdx + 1) + ' of ' + list.length;
 
     var host = $('lesson');
     host.innerHTML =
@@ -77,19 +105,20 @@
       '<div class="lesson-nav">' +
         '<button class="btn" id="lesson-prev"' + (lessonIdx === 0 ? ' disabled' : '') + '>&larr; Previous</button>' +
         '<button class="btn btn-primary" id="lesson-next"' +
-          (lessonIdx === C.LESSONS.length - 1 ? ' disabled' : '') + '>Next &rarr;</button>' +
+          (lessonIdx === list.length - 1 ? ' disabled' : '') + '>Next &rarr;</button>' +
       '</div>';
 
     /* Hydrate the inline diagram placeholders. */
     Array.prototype.forEach.call(host.querySelectorAll('.diagram'), function (d) {
-      var spec;
+      var spec, bar;
       try { spec = JSON.parse(d.dataset.spec || '{}'); } catch (e) { spec = {}; }
+      try { bar = JSON.parse(d.dataset.bar || 'null'); } catch (e) { bar = null; }
       var cap = d.dataset.cap || '';
       d.innerHTML = '';
       var wrap = document.createElement('div');
       wrap.className = 'board-wrap';
       d.appendChild(wrap);
-      Board.diagram(wrap, spec);
+      Board.diagram(wrap, spec, { variant: d.dataset.variant, bar: bar });
       if (cap) {
         var c = document.createElement('div');
         c.className = 'cap';
@@ -100,7 +129,7 @@
 
     var prev = $('lesson-prev'), next = $('lesson-next');
     if (prev) prev.addEventListener('click', function () { if (lessonIdx > 0) { lessonIdx--; renderLesson(); saveProgress(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
-    if (next) next.addEventListener('click', function () { if (lessonIdx < C.LESSONS.length - 1) { lessonIdx++; renderLesson(); saveProgress(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+    if (next) next.addEventListener('click', function () { if (lessonIdx < list.length - 1) { lessonIdx++; renderLesson(); saveProgress(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
   }
 
   /* ================================================================ */
@@ -149,7 +178,7 @@
   };
 
   function opts() {
-    return { manaEndsGame: $('opt-mana').checked };
+    return { manaEndsGame: $('opt-mana').checked, variant: $('variant').value };
   }
 
   function newGame() {
@@ -163,7 +192,8 @@
     G.busy = false;
     G.log = [];
     flash('');
-    logLine('W', 'New game. You are purple and run 24 → 1.');
+    var v = E.variantOf(G.state);
+    logLine('W', 'New game — <strong>' + v.name + '</strong>. You are purple and run 24 → 1.');
     renderPlay();
     save();
   }
@@ -189,7 +219,7 @@
   }
 
   function moveLabel(mv) {
-    return mv.from + '→' + (mv.off ? 'off' : mv.to);
+    return (mv.enter ? 'bar' : mv.from) + '→' + (mv.off ? 'off' : mv.to);
   }
 
   function renderPlay() {
@@ -199,15 +229,27 @@
     var myTurn = s.turn === E.W && !G.busy && !G.over;
     var legal = myTurn ? E.legalNow(s) : [];
 
-    /* Sources are the points we may lift from; targets appear once a
-       source is selected. */
+    var v = E.variantOf(s);
+
+    /* Sources are the points we may lift from ('bar' included); targets
+       appear once a source is selected. */
     var sources = [], seen = {};
-    legal.forEach(function (m) { if (!seen[m.from]) { seen[m.from] = 1; sources.push(m.from); } });
+    legal.forEach(function (m) {
+      var key = m.enter ? 'bar' : m.from;
+      if (!seen[key]) { seen[key] = 1; sources.push(key); }
+    });
+
+    /* With checkers on the bar there is nothing else to choose, so pick
+       it up automatically rather than making the player click a spine
+       that is their only option. */
+    if (G.selected == null && sources.length === 1 && sources[0] === 'bar') G.selected = 'bar';
 
     var coaching = $('opt-coach').checked;
     var targets = [], offTarget = false;
     if (G.selected != null) {
-      legal.filter(function (m) { return m.from === G.selected; }).forEach(function (m) {
+      legal.filter(function (m) {
+        return (m.enter ? 'bar' : m.from) === G.selected;
+      }).forEach(function (m) {
         if (m.off) { offTarget = true; return; }
         var run = E.topRun(s.points, m.to);
         /* Ask the coach what each destination would cost, so the warning
@@ -241,7 +283,7 @@
     diceFaces(s).forEach(function (f) { dice.appendChild(Board.die(f.v, f.spent)); });
 
     /* hud + stats */
-    var pw = E.pipCount(s.points, E.W), pb = E.pipCount(s.points, E.B);
+    var pw = E.pipCount(s.points, E.W, v, s.bar), pb = E.pipCount(s.points, E.B, v, s.bar);
     $('pip-w').textContent = pw;
     $('pip-b').textContent = pb;
     $('who-w').classList.toggle('active', s.turn === E.W);
@@ -249,9 +291,21 @@
     $('s-pip-w').textContent = pw;
     $('s-pip-b').textContent = pb;
     $('s-off').textContent = s.off.W + ' – ' + s.off.B;
-    $('s-pins-w').textContent = E.pinsHeldBy(s.points, E.W).length + (E.manaHeldBy(s.points, E.W) ? '  (mana!)' : '');
-    $('s-pins-b').textContent = E.pinnedCheckers(s.points, E.W).length + (E.manaHeldBy(s.points, E.B) ? '  (mana!)' : '');
     $('s-score').textContent = G.score.W + ' – ' + G.score.B;
+    $('play-title').textContent = 'Play ' + v.name;
+
+    /* The two games care about different things, so show the stats that
+       actually apply to the one being played. */
+    $('row-bar').hidden = !v.hasBar;
+    $('row-pins-w').hidden = !v.pins;
+    $('row-pins-b').hidden = !v.pins;
+    if (v.hasBar) $('s-bar').textContent = s.bar.W + ' – ' + s.bar.B;
+    if (v.pins) {
+      $('s-pins-w').textContent = E.pinsHeldBy(s.points, E.W).length +
+        (E.manaHeldBy(s.points, E.W, v) ? '  (mana!)' : '');
+      $('s-pins-b').textContent = E.pinnedCheckers(s.points, E.W).length +
+        (E.manaHeldBy(s.points, E.B, v) ? '  (mana!)' : '');
+    }
 
     /* controls */
     var rolled = s.roll.length > 0;
@@ -327,8 +381,10 @@
     if (s.turn !== E.W || G.busy || G.over) return;
     var legal = E.legalNow(s);
 
+    var srcOf = function (m) { return m.enter ? 'bar' : m.from; };
+
     if (n === 'off') {
-      var offMv = legal.filter(function (m) { return m.off && m.from === G.selected; })[0];
+      var offMv = legal.filter(function (m) { return m.off && srcOf(m) === G.selected; })[0];
       if (offMv) doMove(offMv);
       return;
     }
@@ -336,10 +392,12 @@
     /* clicking the selected point again puts it back down */
     if (G.selected === n) { G.selected = null; renderPlay(); return; }
 
-    var asTarget = legal.filter(function (m) { return m.from === G.selected && m.to === n; })[0];
+    var asTarget = legal.filter(function (m) {
+      return srcOf(m) === G.selected && m.to === n;
+    })[0];
     if (G.selected != null && asTarget) { doMove(asTarget); return; }
 
-    if (legal.some(function (m) { return m.from === n; })) {
+    if (legal.some(function (m) { return srcOf(m) === n; })) {
       G.selected = n;
       G.hint = null;
       renderPlay();
@@ -356,10 +414,12 @@
        screen reads as a hint that failed to update. */
     flash('');
 
+    var v = E.variantOf(s);
     var note = moveLabel(mv);
     if (r.pinned) note += ' <span class="tag">— pin!</span>';
+    if (r.hit) note += ' <span class="tag">— hit!</span>';
     if (r.freed) note += ' <span class="tag">— released</span>';
-    if (E.manaHeldBy(s.points, E.W) && mv.to === E.startPoint(E.B))
+    if (v.pins && E.manaHeldBy(s.points, E.W, v) && mv.to === E.startPoint(E.B, v))
       note += ' <span class="tag">— MANA</span>';
     logLine(E.W, note);
 
@@ -468,10 +528,12 @@
       var mv = plan[i];
       i++;
       var r = E.apply(s, mv);
+      var vb = E.variantOf(s);
       var note = moveLabel(mv);
       if (r.pinned) note += ' <span class="tag">— pinned you!</span>';
+      if (r.hit) note += ' <span class="tag">— hit you!</span>';
       if (r.freed) note += ' <span class="tag">— released</span>';
-      if (E.manaHeldBy(s.points, E.B) && mv.to === E.startPoint(E.W))
+      if (vb.pins && E.manaHeldBy(s.points, E.B, vb) && mv.to === E.startPoint(E.W, vb))
         note += ' <span class="tag">— MANA against you</span>';
       logLine(E.B, note);
       renderPlay();
@@ -498,6 +560,8 @@
     G.score[res.winner] += res.points;
     var youWon = res.winner === E.W;
     var label = res.reason === 'mars' ? 'a mars (double game)'
+              : res.reason === 'gammon' ? 'a gammon (double game)'
+              : res.reason === 'backgammon' ? 'a backgammon (triple game)'
               : res.reason === 'mana' ? 'the mana — an instant double game'
               : 'a single game';
     flash('<strong>' + (youWon ? 'You win' : 'Opponent wins') + '</strong> — ' + label +
@@ -524,6 +588,7 @@
 
   function settings() {
     return {
+      variant: $('variant').value,
       difficulty: $('difficulty').value,
       hints: $('opt-hints').checked,
       coach: $('opt-coach').checked,
@@ -546,6 +611,7 @@
     var s = Store.get('settings', null);
     if (!s) return;
     if (s.difficulty) $('difficulty').value = s.difficulty;
+    if (s.variant && E.VARIANTS[s.variant]) $('variant').value = s.variant;
     $('opt-hints').checked = s.hints !== false;
     $('opt-coach').checked = s.coach !== false;
     $('opt-mana').checked = !!s.mana;
@@ -560,6 +626,8 @@
     G.state = r.state;
     G.turnStart = r.turnStart;
     G.state.opts.manaEndsGame = $('opt-mana').checked;
+    /* Keep the picker in step with the game we actually restored. */
+    $('variant').value = G.state.variantId;
 
     /* Rebuild the undo history by walking the turn again, so Undo still
        works after a refresh instead of being a button that does nothing. */
@@ -609,6 +677,9 @@
     save();
   });
   $('difficulty').addEventListener('change', function () { this.blur(); save(); });
+  /* Switching game starts a fresh one — the two variants do not share a
+     position, and the match score carries over. */
+  $('variant').addEventListener('change', function () { this.blur(); newGame(); });
 
   /* ================================================================ */
   /* Drills                                                           */
@@ -618,7 +689,9 @@
 
   function saveProgress() {
     if (!Store.available) return;
-    Store.patch({ progress: { lessonIdx: lessonIdx, drillIdx: D.idx, solved: D.solved } });
+    Store.patch({ progress: {
+      gameIdx: gameIdx, lessonIdx: lessonIdx, drillIdx: D.idx, solved: D.solved
+    } });
   }
 
   function loadDrill() {
@@ -728,13 +801,16 @@
 
   var progress = Store.get('progress', null);
   if (progress) {
+    if (typeof progress.gameIdx === 'number')
+      gameIdx = Math.min(Math.max(0, progress.gameIdx), C.GAMES.length - 1);
     if (typeof progress.lessonIdx === 'number')
-      lessonIdx = Math.min(Math.max(0, progress.lessonIdx), C.LESSONS.length - 1);
+      lessonIdx = Math.min(Math.max(0, progress.lessonIdx), C.GAMES[gameIdx].lessons.length - 1);
     if (typeof progress.drillIdx === 'number')
       D.idx = Math.min(Math.max(0, progress.drillIdx), C.DRILLS.length - 1);
     if (progress.solved && typeof progress.solved === 'object') D.solved = progress.solved;
   }
 
+  buildGameTabs();
   buildToc();
   renderGlossary();
 

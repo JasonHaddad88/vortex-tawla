@@ -263,6 +263,200 @@
   })();
 
   /* ---------------------------------------------------------------- */
+  describe('Fransawiyyeh — setup and travel');
+
+  var FR = { variant: 'fransawiyyeh' };
+  var fv = E.VARIANTS.fransawiyyeh;
+
+  (function () {
+    var g = E.newGame(FR);
+    eq('variant is recorded on the state', g.variantId, 'fransawiyyeh');
+    eq('White has 15 checkers', E.countOn(g.points, 'W'), 15);
+    eq('Black has 15 checkers', E.countOn(g.points, 'B'), 15);
+
+    /* The standard opening, mirrored: 24x2, 13x5, 8x3, 6x5. */
+    eq('White midpoint holds 5', g.points[13].length, 5);
+    eq('White 6-point holds 5', g.points[6].length, 5);
+    eq('White 8-point holds 3', g.points[8].length, 3);
+    eq('White 24-point holds 2', g.points[24].length, 2);
+    eq('Black 24-point is absolute 1', E.startPoint('B', fv), 1);
+    eq('Black midpoint is absolute 12', g.points[12].join(''), 'BBBBB');
+    eq('Black 6-point is absolute 19', g.points[19].join(''), 'BBBBB');
+
+    /* 167 is the well-known opening pip count for backgammon; if the
+       geometry were wrong this would not land on it. */
+    eq('White opening pip count is 167', E.pipCount(g.points, 'W', fv, g.bar), 167);
+    eq('Black opening pip count is 167', E.pipCount(g.points, 'B', fv, g.bar), 167);
+
+    ok('nobody starts on the bar', g.bar.W === 0 && g.bar.B === 0);
+  })();
+
+  describe('Fransawiyyeh — hitting and the bar');
+
+  (function () {
+    var s = E.fromSpec({ 13: 'WWWWW', 9: 'B', 8: 'WWW', 6: 'WWWWW', 4: 'WW',
+                         1: 'BB', 12: 'BBBB', 17: 'BBB', 19: 'BBBBB' }, 'W', FR);
+    eq('position has 15 White', E.countOn(s.points, 'W'), 15);
+    eq('position has 15 Black', E.countOn(s.points, 'B'), 15);
+
+    E.setRoll(s, 4, 4);
+    var hit = E.legalNow(s).filter(function (m) { return m.from === 13 && m.to === 9; })[0];
+    ok('landing on a lone checker is legal', !!hit);
+    var r = E.apply(s, hit);
+    ok('and it is reported as a hit', r.hit === true);
+    ok('not as a pin', r.pinned === false);
+    eq('the point now holds only White', s.points[9].join(''), 'W');
+    eq('the hit checker is on the bar', s.bar.B, 1);
+    eq('Black has 14 left on the board', E.countOn(s.points, 'B'), 14);
+    eq('and still owes 15 checkers in total', E.countOn(s.points, 'B') + s.bar.B + s.off.B, 15);
+    /* A checker on the bar owes the full 25 pips. */
+    ok('the bar checker is counted at 25 pips',
+       E.pipCount(s.points, 'B', fv, s.bar) === E.pipCount(s.points, 'B', fv, { W: 0, B: 0 }) + 25);
+  })();
+
+  (function () {
+    /* On the bar: nothing else may move until it re-enters. */
+    var s = E.fromSpec({ 13: 'WWWWW', 8: 'WWW', 6: 'WWWWW', 4: 'W',
+                         1: 'BB', 12: 'BBBBB', 17: 'BBB', 19: 'BBBBB' },
+                       'W', { variant: 'fransawiyyeh', bar: { W: 1, B: 0 } });
+    eq('one White checker is on the bar', s.bar.W, 1);
+    eq('White still totals 15', E.countOn(s.points, 'W') + s.bar.W + s.off.W, 15);
+
+    E.setRoll(s, 3, 5);
+    var moves = E.legalNow(s);
+    ok('there are moves', moves.length > 0);
+    ok('every move is a re-entry', moves.every(function (m) { return m.enter === true; }),
+       JSON.stringify(moves));
+    ok('nothing moves from the board', !moves.some(function (m) { return m.from !== 'bar'; }));
+
+    /* Entry lands in the opponent's home: own point 25 - die. */
+    eq('White enters on 22 with a 3', E.entryPoint('W', 3, fv), 22);
+    eq('White enters on 19 with a 6', E.entryPoint('W', 6, fv), 19);
+    eq('Black enters on absolute 6 with a 6', E.entryPoint('B', 6, fv), 6);
+    eq('Black enters on absolute 1 with a 1', E.entryPoint('B', 1, fv), 1);
+
+    var enter = moves.filter(function (m) { return m.die === 3; })[0];
+    ok('the 3 enters on point 22', enter && enter.to === 22);
+    E.apply(s, enter);
+    eq('the bar is now empty', s.bar.W, 0);
+    eq('and the checker is on 22', s.points[22].join(''), 'W');
+    ok('after entering, ordinary moves are available again',
+       E.legalNow(s).some(function (m) { return m.from !== 'bar'; }));
+  })();
+
+  (function () {
+    /* A closed board: every entry point held by two or more. */
+    var s = E.fromSpec({ 24: 'BB', 23: 'BB', 22: 'BB', 21: 'BB', 20: 'BB', 19: 'BBB',
+                         13: 'WWWWW', 8: 'WWW', 6: 'WWWWW', 12: 'BB' },
+                       'W', { variant: 'fransawiyyeh', bar: { W: 2, B: 0 } });
+    eq('White totals 15', E.countOn(s.points, 'W') + s.bar.W + s.off.W, 15);
+    eq('Black totals 15', E.countOn(s.points, 'B') + s.bar.B + s.off.B, 15);
+    E.setRoll(s, 2, 5);
+    eq('a closed board means no legal move at all', E.legalNow(s).length, 0);
+    ok('the turn is complete immediately', E.turnComplete(s));
+  })();
+
+  (function () {
+    /* Bear-off is blocked while anything is on the bar. */
+    var s = E.fromSpec({ 6: 'WW', 5: 'WWW', 4: 'WWW', 3: 'WWW', 2: 'WW', 1: 'W',
+                         19: 'BBBBB', 20: 'BBBBB', 21: 'BBBBB' },
+                       'W', { variant: 'fransawiyyeh', bar: { W: 1, B: 0 } });
+    ok('not all home while one is on the bar', !E.allHome(s.points, 'W', fv, s.bar));
+    E.setRoll(s, 6, 6);
+    ok('no bear-off is offered', !E.legalNow(s).some(function (m) { return m.off; }));
+
+    var s2 = E.fromSpec({ 6: 'WWW', 5: 'WWW', 4: 'WWW', 3: 'WWW', 2: 'WW', 1: 'W',
+                          19: 'BBBBB', 20: 'BBBBB', 21: 'BBBBB' }, 'W', FR);
+    ok('all home with an empty bar', E.allHome(s2.points, 'W', fv, s2.bar));
+    E.setRoll(s2, 6, 1);
+    ok('bear-off resumes', s2.plans.some(function (pl) {
+      return pl.some(function (m) { return m.off; });
+    }));
+  })();
+
+  describe('Fransawiyyeh — no pinning');
+
+  (function () {
+    var s = E.fromSpec({ 10: 'B', 13: 'WWWWW', 6: 'WWWWW', 8: 'WWW', 4: 'WW',
+                         1: 'BB', 12: 'BBBB', 17: 'BBBB', 19: 'BBBB' }, 'W', FR);
+    E.setRoll(s, 3, 3);
+    var mv = E.legalNow(s).filter(function (m) { return m.from === 13 && m.to === 10; })[0];
+    ok('the hit is available', !!mv);
+    E.apply(s, mv);
+    var mixed = false;
+    for (var i = 1; i <= 24; i++) {
+      var a = s.points[i];
+      for (var k = 1; k < a.length; k++) if (a[k] !== a[0]) mixed = true;
+    }
+    ok('no point ever holds two colours', !mixed);
+    eq('nothing is recorded as pinned', E.pinnedCheckers(s.points, 'B').length, 0);
+    ok('and the mana concept does not apply', !E.manaHeldBy(s.points, 'W', fv));
+  })();
+
+  describe('Fransawiyyeh — scoring');
+
+  (function () {
+    /* Loser has borne off one: plain single. */
+    var single = E.fromSpec({ 19: 'BBBBBBBBBBBBBB' }, 'W', FR);
+    eq('a single game is 1 point', E.result(single).points, 1);
+
+    /* Loser bore off none, nothing stranded: gammon. */
+    var gammon = E.fromSpec({ 19: 'BBBBBBBBBBBBBBB' }, 'W', FR);
+    eq('a gammon is 2 points', E.result(gammon).points, 2);
+    eq('and is named', E.result(gammon).reason, 'gammon');
+
+    /* Loser bore off none and still has a checker in White's home: back-
+       gammon, the triple. */
+    var bg = E.fromSpec({ 19: 'BBBBBBBBBBBBBB', 3: 'B' }, 'W', FR);
+    eq('a backgammon is 3 points', E.result(bg).points, 3);
+    eq('and is named', E.result(bg).reason, 'backgammon');
+
+    var onBar = E.fromSpec({ 19: 'BBBBBBBBBBBBBB' }, 'W',
+                           { variant: 'fransawiyyeh', bar: { W: 0, B: 1 } });
+    eq('a checker still on the bar is also a backgammon', E.result(onBar).points, 3);
+
+    /* Mahbooseh must be unaffected: it has no triple. */
+    var mars = E.fromSpec({ 1: 'BBBBBBBBBBBBBBB' }, 'W', {});
+    eq('Mahbooseh still tops out at a mars', E.result(mars).points, 2);
+    eq('and calls it a mars', E.result(mars).reason, 'mars');
+  })();
+
+  describe('Fransawiyyeh — full games');
+
+  (function () {
+    var crashed = 0, finished = 0, gammons = 0;
+    for (var n = 0; n < 25; n++) {
+      try {
+        var s = E.newGame(FR), turns = 0;
+        while (!E.result(s) && turns < 800) {
+          var dd = E.rollDice();
+          E.setRoll(s, dd[0], dd[1]);
+          (window.AI.choosePlan(s, n % 2 ? 'normal' : 'easy') || []).forEach(function (m) {
+            E.apply(s, m);
+          });
+          if (E.result(s)) break;
+          E.endTurn(s);
+          turns++;
+        }
+        if (E.result(s)) {
+          finished++;
+          if (E.result(s).points > 1) gammons++;
+        }
+        var tw = E.countOn(s.points, 'W') + s.off.W + s.bar.W;
+        var tb = E.countOn(s.points, 'B') + s.off.B + s.bar.B;
+        if (tw !== 15) throw new Error('White count drifted to ' + tw);
+        if (tb !== 15) throw new Error('Black count drifted to ' + tb);
+      } catch (err) {
+        crashed++;
+        results.push({ group: group, name: 'game ' + n, pass: false, detail: String(err) });
+      }
+    }
+    eq('25 games ran without error', crashed, 0);
+    eq('and all of them finished', finished, 25);
+    ok('checker counts held across every game (incl. the bar)', crashed === 0);
+  })();
+
+  /* ---------------------------------------------------------------- */
   describe('Coach — turn review');
 
   var Coach = window.Coach, Store = window.Store;
@@ -428,21 +622,39 @@
   /* ---------------------------------------------------------------- */
   describe('Lesson diagrams');
 
-  C.LESSONS.forEach(function (l, i) {
-    var re = /data-spec='([^']*)'/g, m, k = 0;
-    while ((m = re.exec(l.html))) {
-      k++;
-      var tag = 'lesson ' + (i + 1) + ' diagram ' + k;
-      var spec;
-      try { spec = JSON.parse(m[1]); }
-      catch (err) { ok(tag + ': spec parses', false, String(err)); continue; }
-      if (!Object.keys(spec).length) continue;      // deliberately empty board
-      var pts = E.fromSpec(spec).points;
-      eq(tag + ': 15 White checkers', E.countOn(pts, 'W'), 15);
-      eq(tag + ': 15 Black checkers', E.countOn(pts, 'B'), 15);
-      var bad = Object.keys(spec).filter(function (p) { return +p < 1 || +p > 24; });
-      eq(tag + ': all points in range', bad.join(','), '');
-    }
+  C.GAMES.forEach(function (game) {
+    game.lessons.forEach(function (l, i) {
+      /* Pull each diagram's whole tag so its data-bar travels with it. */
+      var re = /<div class="diagram"([^>]*)><\/div>/g, m, k = 0;
+      while ((m = re.exec(l.html))) {
+        k++;
+        var attrs = m[1];
+        var tag = game.id + ' lesson ' + (i + 1) + ' diagram ' + k;
+        var specRaw = (attrs.match(/data-spec='([^']*)'/) || [])[1];
+        var barRaw = (attrs.match(/data-bar='([^']*)'/) || [])[1];
+        var spec, bar = { W: 0, B: 0 };
+        try { spec = JSON.parse(specRaw || '{}'); }
+        catch (err) { ok(tag + ': spec parses', false, String(err)); continue; }
+        if (barRaw) {
+          try {
+            var b = JSON.parse(barRaw);
+            bar.W = b.W || 0; bar.B = b.B || 0;
+          } catch (err2) { ok(tag + ': bar parses', false, String(err2)); continue; }
+        }
+        if (!Object.keys(spec).length) continue;    // deliberately empty board
+        var pts = E.fromSpec(spec).points;
+        eq(tag + ': 15 White checkers', E.countOn(pts, 'W') + bar.W, 15);
+        eq(tag + ': 15 Black checkers', E.countOn(pts, 'B') + bar.B, 15);
+        var bad = Object.keys(spec).filter(function (p) { return +p < 1 || +p > 24; });
+        eq(tag + ': all points in range', bad.join(','), '');
+        /* Only a variant with a bar may show checkers on it. */
+        if (bar.W || bar.B) {
+          var vid = (attrs.match(/data-variant="([^"]*)"/) || [])[1];
+          ok(tag + ': bar is only used by a variant that has one',
+             !!(vid && E.VARIANTS[vid] && E.VARIANTS[vid].hasBar), 'variant=' + vid);
+        }
+      }
+    });
   });
 
   /* ---------------------------------------------------------------- */
