@@ -846,6 +846,48 @@
   })();
 
   /* ---------------------------------------------------------------- */
+  describe('Spoken board descriptions');
+
+  (function () {
+    var B = window.Board;
+    var solo = { W: 'your', B: "the opponent's" };
+    var duo = { W: 'purple', B: 'cyan' };
+
+    var s = E.fromSpec({ 24: 'WWWWWWWWWWWWWWW', 1: 'BBBBBBBBBBBBBBB' });
+    eq('a full point reads naturally',
+       B.describePoint(s, 24, solo), 'Point 24, fifteen of your checkers');
+    eq('and so does the opponent\'s',
+       B.describePoint(s, 1, solo), "Point 1, fifteen of the opponent's checkers");
+    eq('an empty point says so', B.describePoint(s, 13, solo), 'Point 13, empty');
+
+    /* "one of your checkers", not "one of your checker". */
+    var one = E.fromSpec({ 9: 'W' });
+    eq('a single checker is still plural after "one of"',
+       B.describePoint(one, 9, solo), 'Point 9, one of your checkers');
+    eq('but a colour name stays singular',
+       B.describePoint(one, 9, duo), 'Point 9, one purple checker');
+
+    /* The layer that makes Mahbooseh what it is has to be spoken, since
+       a screen reader cannot see one checker sitting on another. */
+    var pinned = E.fromSpec({ 9: 'BW' });
+    eq('a pin is described, not implied',
+       B.describePoint(pinned, 9, solo),
+       "Point 9, one of your checkers, on top of one of the opponent's checkers trapped underneath");
+
+    var deep = E.fromSpec({ 9: 'BWW' });
+    eq('so is a stack sitting on a prisoner',
+       B.describePoint(deep, 9, duo),
+       'Point 9, two purple checkers, on top of one cyan checker trapped underneath');
+
+    /* The sandwich: both colours buried under the top run. */
+    var sand = E.fromSpec({ 9: 'BWB' });
+    ok('a sandwich names both trapped colours',
+       /one cyan checker/.test(B.describePoint(sand, 9, duo)) &&
+       /one purple checker/.test(B.describePoint(sand, 9, duo)),
+       B.describePoint(sand, 9, duo));
+  })();
+
+  /* ---------------------------------------------------------------- */
   describe('Lesson diagrams');
 
   C.GAMES.forEach(function (game) {

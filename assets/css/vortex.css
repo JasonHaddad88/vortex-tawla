@@ -14,7 +14,13 @@
   --border: rgba(168, 85, 247, 0.18);
   --border-strong: rgba(168, 85, 247, 0.45);
   --text: #e2e8f0;
-  --muted: #6b7280;
+  /* Deliberate deviation from the Portal palette, which uses #6b7280
+     here. That is 3.8:1 on our darkest surface and this variable is used
+     for real body text (labels, captions, stat keys), so it failed WCAG
+     AA. #7c8492 is the nearest value that clears 4.5:1 (it measures
+     4.85:1 on --surface-2). Keep the rest of the palette in sync with
+     the Portal; this one is intentionally lighter. */
+  --muted: #7c8492;
   --subtle: #9ca3af;
   --purple: #a855f7;
   --purple-glow: rgba(168, 85, 247, 0.45);
@@ -27,6 +33,54 @@
 }
 
 * { box-sizing: border-box; }
+
+/* ---- accessibility ---------------------------------------------- */
+
+/* Visible to screen readers, invisible on screen. Used for the live
+   region and for text that gives non-visual context. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Same, but reveals itself on focus — for the skip link. */
+.sr-only-focusable:focus {
+  position: fixed;
+  top: .6rem; left: .6rem;
+  width: auto; height: auto;
+  margin: 0; padding: .6rem .9rem;
+  clip: auto; clip-path: none;
+  z-index: 100;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  color: var(--text);
+}
+
+/* The default focus ring is close to invisible on this background, and
+   every interactive surface here is dark. */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Keep the ring for keyboard users without boxing every mouse click. */
+:focus:not(:focus-visible) { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 
 html, body {
   margin: 0; padding: 0;

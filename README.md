@@ -169,6 +169,42 @@ heuristic and gets it right. The numbers, from the test suite:
 Both behaviours are pinned by tests, so neither can drift unnoticed. Getting past this needs a
 deeper search or a proper rollout, not another weight.
 
+## Accessibility
+
+The board is the hard part: it is a pile of `div`s whose entire meaning is carried by colour and
+position, so without work it is invisible to a screen reader and unreachable from a keyboard.
+
+**It reads.** Every point, the bar and both trays carry a description of what is actually on them,
+and crucially of the *layers* — a screen reader cannot see one checker sitting on another, and in
+Mahbooseh that stack is the whole game:
+
+> Point 1, one of your checkers, on top of one of the opponent's checkers trapped underneath
+
+State comes after contents, so exploring the board also tells you what you can do with it: *"You
+can move from here"*, *"Legal move, traps a checker"*, *"Legal move, warning: leaves the mana"*.
+
+**It is keyboard-playable.** The board is a `grid` with a roving tabindex — one tab stop for the
+whole thing, arrow keys to move between points, Home/End for the ends of a row, Enter to pick a
+checker up and to put it down. A full turn needs no mouse. Because the board is rebuilt from
+scratch on every change, focus is explicitly restored afterwards; without that the cursor is thrown
+back to the top of the page after every single move. Clicking with the mouse moves the keyboard
+cursor too, so the two do not fight.
+
+**It narrates.** A polite live region announces rolls, each move (including hits, pins and
+releases), the coach's verdict, and the result. The opponent's turn is announced once as a summary
+rather than as five separate updates, because a live region that changes five times in two seconds
+just loses the first four.
+
+**Other bits.** Skip link; `aria-current` on the active section; `prefers-reduced-motion` honoured;
+a visible focus ring drawn as an inset shadow on the points, since an outline on a clipped triangle
+gets sliced in half. Cyan checkers carry an inset ring so the two sides are not distinguished by
+hue alone. Under Windows High Contrast the checkers would otherwise vanish outright — they are
+background gradients — so they opt out of forced colours and fall back to the system's two colours.
+
+One palette deviation was needed: the Portal's `--muted` (`#6b7280`) is 3.8:1 on our darkest
+surface and is used for real body text, so it failed WCAG AA. It is `#7c8492` here, which measures
+4.85:1. Everything else in the palette already passed.
+
 ## Review
 
 Every completed turn is recorded with the position **as it stood when the dice were thrown**, which
@@ -249,7 +285,11 @@ that an exhausted time budget degrades cleanly to the one-ply answer instead of 
 half-finished average, and — as a pinned, documented divergence — that one ply and two ply disagree
 about drill 2 in exactly the way described above.
 
-Current status: **354 browser assertions and 27 service-worker assertions, 0 failing.**
+The spoken board descriptions are covered too — including that a pin is described rather than
+implied, that a sandwich names both trapped colours, and that "one of your checkers" stays plural
+where "one purple checker" does not.
+
+Current status: **362 browser assertions and 27 service-worker assertions, 0 failing.**
 
 ## Still to do: Gulbahar
 

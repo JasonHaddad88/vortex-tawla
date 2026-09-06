@@ -35,9 +35,15 @@
       $('view-' + v).classList.toggle('active', v === view);
     });
     Array.prototype.forEach.call(document.querySelectorAll('.navlink'), function (b) {
-      b.classList.toggle('active', b.dataset.view === view);
+      var on = b.dataset.view === view;
+      b.classList.toggle('active', on);
+      /* Tells a screen reader which section is showing, which the class
+         alone does not. */
+      if (on) b.setAttribute('aria-current', 'page');
+      else b.removeAttribute('aria-current');
     });
     $('topbar').classList.remove('open');
+    $('hamburger').setAttribute('aria-expanded', 'false');
     /* Boards measure themselves, so anything drawn while hidden has to
        be drawn again once it has a size. */
     if (view === 'learn') renderLesson();
@@ -50,7 +56,35 @@
   Array.prototype.forEach.call(document.querySelectorAll('.navlink'), function (b) {
     b.addEventListener('click', function () { show(b.dataset.view); });
   });
-  $('hamburger').addEventListener('click', function () { $('topbar').classList.toggle('open'); });
+  $('hamburger').addEventListener('click', function () {
+    var open = $('topbar').classList.toggle('open');
+    $('hamburger').setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  /* ---------------------------------------------------------------- */
+  /* Screen-reader narration                                           */
+  /* ---------------------------------------------------------------- */
+
+  /* One polite live region. Re-setting identical text does not re-announce
+     in most screen readers, so a zero-width marker forces a repeat when
+     the same thing genuinely happens twice (rolling 3-3 twice running). */
+  var lastSaid = '';
+  function announce(text) {
+    if (!text) return;
+    var node = $('sr-live');
+    if (!node) return;
+    node.textContent = (text === lastSaid) ? text + '​' : text;
+    lastSaid = text;
+  }
+
+  function sayMove(mv, res, mover) {
+    var s = (mv.enter ? 'from the bar' : 'point ' + mv.from) + ' to ' +
+            (mv.off ? 'off the board' : 'point ' + mv.to);
+    if (res && res.hit) s += ', hitting a checker';
+    if (res && res.pinned) s += ', trapping a checker';
+    if (res && res.freed) s += ', releasing a trapped checker';
+    return (mover ? mover + ' moved ' : 'Moved ') + s + '.';
+  }
 
   var resizeTimer;
   window.addEventListener('resize', function () {
@@ -131,7 +165,11 @@
       var wrap = document.createElement('div');
       wrap.className = 'board-wrap';
       d.appendChild(wrap);
-      Board.diagram(wrap, spec, { variant: d.dataset.variant, bar: bar });
+      Board.diagram(wrap, spec, {
+        variant: d.dataset.variant, bar: bar,
+        label: cap || 'Board diagram',
+        names: { W: 'purple', B: 'cyan' }    // lessons speak in colours
+      });
       if (cap) {
         var c = document.createElement('div');
         c.className = 'cap';
@@ -184,6 +222,7 @@
     selected: null,
     hint: null,
     review: null,      // last Coach.reviewTurn result
+    focus: null,       // {row,col} of the keyboard cursor on the board
     history: [],       // one Review entry per completed turn
     log: [],
     score: { W: 0, B: 0 },
@@ -226,6 +265,9 @@
 
   function flash(msg, kind) {
     $('play-flash').innerHTML = msg ? '<div class="flash ' + (kind || 'info') + '">' + msg + '</div>' : '';
+    /* Results and warnings are the things most worth hearing, so send the
+       flash text to the live region too, without its markup. */
+    if (msg) announce($('play-flash').textContent.trim());
   }
 
   function logLine(who, text) {
@@ -290,6 +332,8 @@
       });
     }
 
+    var hadFocus = $('board').contains(document.activeElement);
+
     Board.render($('board'), s, {
       interactive: myTurn,
       showSources: $('opt-hints').checked,
@@ -298,8 +342,22 @@
       targets: targets,
       offTarget: offTarget,
       hint: G.hint,
-      onPoint: onPoint
+      onPoint: onPoint,
+      label: v.name + ' board. ' + sideName(E.W) + ' runs 24 down to 1, ' +
+             sideName(E.B) + ' runs 1 up to 24.',
+      names: twoPlayer()
+        ? { W: 'purple', B: 'cyan' }
+        : { W: 'your', B: "opponent's" },
+      focus: G.focus,
+      onFocusMove: function (r, c) { G.focus = { row: r, col: c }; }
     });
+
+    /* The board is rebuilt on every change, so keyboard focus would be
+       thrown back to the top of the page after each move. Put it back. */
+    if (hadFocus) {
+      var cell = $('board').querySelector('[tabindex="0"]');
+      if (cell) cell.focus();
+    }
 
     renderCoach(targets);
 
@@ -416,6 +474,15 @@
     /* In two-player mode either side may be on move, so gate on whose
        turn it is rather than on the human always being White. */
     if ((!twoPlayer() && s.turn !== E.W) || G.busy || G.over) return;
+
+    /* Keep the keyboard cursor where the mouse just acted, so the two
+       input methods do not fight each other. */
+    var cell = $('board').querySelector(
+      n === 'bar' ? '.bar' : n === 'off' ? null : '.pt[data-point="' + n + '"]');
+    if (cell && cell.dataset && cell.dataset.row !== undefined) {
+      G.focus = { row: +cell.dataset.row, col: +cell.dataset.col };
+    }
+
     var legal = E.legalNow(s);
 
     var srcOf = function (m) { return m.enter ? 'bar' : m.from; };
@@ -457,9 +524,13 @@
     if (r.pinned) note += ' <span class="tag">— pin!</span>';
     if (r.hit) note += ' <span class="tag">— hit!</span>';
     if (r.freed) note += ' <span class="tag">— released</span>';
-    if (v.pins && E.manaHeldBy(s.points, mover, v) && mv.to === E.startPoint(E.opp(mover), v))
-      note += ' <span class="tag">— MANA</span>';
+    var mana = v.pins && E.manaHeldBy(s.points, mover, v) &&
+               mv.to === E.startPoint(E.opp(mover), v);
+    if (mana) note += ' <span class="tag">— MANA</span>';
     logLine(mover, note);
+    announce(sayMove(mv, r, twoPlayer() ? sideName(mover) : '') +
+             (mana ? ' That takes the mana.' : '') +
+             (E.legalNow(s).length === 0 ? ' Turn complete, press End turn.' : ''));
 
     /* The turn is only worth reviewing once it is actually finished —
        a half-played turn has no meaningful cost yet. */
@@ -483,6 +554,8 @@
     if ($('opt-coach').checked && G.review && !G.review.same && Coach.isMistake(G.review.grade)) {
       logLine(G.state.turn, '<span class="tag">' + G.review.grade.label + '</span> — better was ' +
                             G.review.bestLine);
+      announce(G.review.grade.label + '. Better was ' + G.review.bestLine +
+               (G.review.why ? ', because ' + G.review.why : '') + '.');
     }
   }
 
@@ -526,6 +599,8 @@
     flash('');
     logLine(s.turn, '<strong>' + (twoPlayer() ? sideName(s.turn) + ' rolls ' : 'Roll ') +
             d[0] + '-' + d[1] + '</strong>' + (d[0] === d[1] ? ' (double)' : ''));
+    announce((twoPlayer() ? sideName(s.turn) + ' rolled ' : 'You rolled ') +
+             d[0] + ' and ' + d[1] + (d[0] === d[1] ? ', a double, four moves' : '') + '.');
     save();
 
     if (E.legalNow(s).length === 0) {
@@ -582,10 +657,15 @@
       return;
     }
 
-    var i = 0;
+    var i = 0, spoken = [];
     (function step() {
       if (i >= plan.length) {
         G.busy = false;
+        /* One summary at the end rather than a running commentary — a
+           live region that changes five times in two seconds just loses
+           the earlier announcements. */
+        announce('Opponent rolled ' + d[0] + ' and ' + d[1] + '. ' +
+                 spoken.join(' ') + ' Your turn.');
         recordTurn(null, false);   // opponent turns are logged, not graded
         if (checkOver()) return;
         E.endTurn(s);
@@ -606,6 +686,7 @@
       if (vb.pins && E.manaHeldBy(s.points, E.B, vb) && mv.to === E.startPoint(E.W, vb))
         note += ' <span class="tag">— MANA against you</span>';
       logLine(E.B, note);
+      spoken.push(sayMove(mv, r, 'Opponent'));
       renderPlay();
       setTimeout(step, 520);
     })();
@@ -905,6 +986,8 @@
     Board.render($('review-board'), st, {
       interactive: false,
       showSources: true,
+      label: 'Position before the move, rolled ' + h.roll.join(' and '),
+      names: { W: 'your', B: "the opponent's" },
       sources: h.played.map(function (m) { return m.enter ? 'bar' : m.from; }),
       targets: h.played.filter(function (m) { return !m.off; })
                        .map(function (m) { return { to: m.to }; })
@@ -915,7 +998,7 @@
   /* Drills                                                           */
   /* ================================================================ */
 
-  var D = { idx: 0, state: null, selected: null, revealed: false, solved: {} };
+  var D = { idx: 0, state: null, selected: null, revealed: false, solved: {}, focus: null };
 
   function saveProgress() {
     if (!Store.available) return;
@@ -961,9 +1044,15 @@
       });
     }
 
+    var hadFocus = $('drill-board').contains(document.activeElement);
+
     Board.render($('drill-board'), s, {
       interactive: true,
       showSources: true,
+      label: 'Drill board: ' + d.title,
+      names: { W: 'your', B: "the opponent's" },
+      focus: D.focus,
+      onFocusMove: function (r, c) { D.focus = { row: r, col: c }; },
       sources: sources,
       selected: D.selected,
       targets: targets,
@@ -973,6 +1062,13 @@
 
     /* Left enabled deliberately: checkDrill() explains that both dice
        still have to be played, which is more use than a dead button. */
+    /* Same as the play board: it is rebuilt on every change, so keyboard
+       focus has to be put back or it falls to the top of the page. */
+    if (hadFocus) {
+      var cell = $('drill-board').querySelector('[tabindex="0"]');
+      if (cell) cell.focus();
+    }
+
     $('drill-check').disabled = false;
     $('drill-prev').disabled = D.idx === 0;
     $('drill-next').disabled = D.idx === C.DRILLS.length - 1;
@@ -980,6 +1076,10 @@
 
   function onDrillPoint(n) {
     var s = D.state, legal = E.legalNow(s);
+    var cell = $('drill-board').querySelector('.pt[data-point="' + n + '"]');
+    if (cell && cell.dataset.row !== undefined) {
+      D.focus = { row: +cell.dataset.row, col: +cell.dataset.col };
+    }
     if (n === 'off') {
       var offMv = legal.filter(function (m) { return m.off && m.from === D.selected; })[0];
       if (offMv) { E.apply(s, offMv); D.selected = null; renderDrill(); }

@@ -125,6 +125,21 @@
 
 /* interaction states */
 .pt.clickable { cursor: pointer; }
+
+/* The triangle is clipped, so an outline on the cell would be sliced in
+   half. Draw the keyboard ring as an inset box on the cell instead. */
+.pt:focus { outline: none; }
+.pt:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--cyan), 0 0 12px var(--cyan-glow);
+  border-radius: 3px;
+  z-index: 3;
+}
+.board .bar:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--cyan), 0 0 12px var(--cyan-glow);
+}
+.tray:focus-visible { outline: 2px solid var(--cyan); outline-offset: 1px; }
 .pt.movable .tri { background: rgba(168,85,247,.22); }
 .pt.selected .tri { background: rgba(168,85,247,.34); }
 .pt.target { cursor: pointer; }
@@ -169,6 +184,9 @@
   font-size: 0.6rem;
   transition: box-shadow .15s;
 }
+/* The two sides must not be told apart by hue alone: purple checkers are
+   plain, cyan ones carry an inset ring. Readable in greyscale and for
+   anyone who cannot separate the two hues. */
 .chk.w {
   background: radial-gradient(circle at 34% 30%, #c98bff, var(--chk-w) 62%, #7326b8);
   border: 1px solid var(--chk-w-rim);
@@ -177,7 +195,7 @@
 .chk.b {
   background: radial-gradient(circle at 34% 30%, #b9f6ff, var(--chk-b) 62%, #17869c);
   border: 1px solid var(--chk-b-rim);
-  box-shadow: 0 2px 6px rgba(0,0,0,.6);
+  box-shadow: 0 2px 6px rgba(0,0,0,.6), inset 0 0 0 2px rgba(6,6,10,.55);
 }
 /* a checker with an enemy sitting on it: mahboos — locked down */
 .chk.pinned {
@@ -536,6 +554,34 @@
 @media (display-mode: standalone) {
   .topbar { padding-top: max(1rem, env(safe-area-inset-top)); }
   main { padding-bottom: max(2rem, env(safe-area-inset-bottom)); }
+}
+
+/* ---- forced colours (Windows High Contrast) --------------------- */
+
+/* Backgrounds are stripped in this mode, and every checker here IS a
+   background gradient — without this the board renders as an empty grid.
+   Opt those few elements out and fall back to the system's own two
+   colours, which still tells the sides apart. */
+@media (forced-colors: active) {
+  .chk {
+    forced-color-adjust: none;
+    border: 2px solid CanvasText;
+  }
+  .chk.w { background: Canvas; }
+  .chk.b { background: CanvasText; }
+  .chk.pinned { border-style: dashed; filter: none; }
+  .pt .tri { forced-color-adjust: none; }
+  .pt.target .tri, .pt.target-pin .tri, .pt.risk-mana .tri, .pt.risk-blot .tri {
+    outline: 2px dashed CanvasText;
+    outline-offset: -3px;
+  }
+  /* Gradient text has no colour of its own and disappears here. */
+  .accent, .brand h1 .accent {
+    -webkit-text-fill-color: CanvasText;
+    color: CanvasText;
+    background: none;
+  }
+  .tbar span { forced-color-adjust: none; border: 1px solid CanvasText; }
 }
 
 /* ---- misc ------------------------------------------------------ */

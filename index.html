@@ -18,12 +18,18 @@
 </head>
 <body>
 
+<a class="sr-only sr-only-focusable" href="#main">Skip to main content</a>
+
+<!-- Turn-by-turn narration for screen readers: rolls, moves, hits, the
+     coach's verdict and the result. Polite so it never interrupts. -->
+<div id="sr-live" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
 <header class="topbar" id="topbar">
   <div class="brand">
     <div class="logo"></div>
     <h1>VORTEX <span class="accent">TAWLA</span></h1>
   </div>
-  <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
+  <button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-expanded="false" aria-controls="nav">
     <span></span><span></span><span></span>
   </button>
   <nav id="nav">
@@ -41,7 +47,7 @@
   <button class="btn btn-small" id="sw-reload">Reload</button>
 </div>
 
-<main>
+<main id="main" tabindex="-1">
 
   <!-- ============================ LEARN ============================ -->
   <section class="view active" id="view-learn">
@@ -110,6 +116,7 @@
         </div>
 
         <div class="board-wrap"><div id="board"></div></div>
+        <p class="sr-only" id="board-help">Use the arrow keys to move around the board, Enter to pick up or drop a checker.</p>
 
         <div class="controls">
           <button class="btn btn-primary" id="btn-roll">Roll</button>

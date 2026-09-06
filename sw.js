@@ -10,7 +10,7 @@
  * missing from this list only shows up as a broken app on a train.
  * ===================================================================== */
 
-var CACHE = 'vortex-tawla-v5';
+var CACHE = 'vortex-tawla-v6';
 
 var PRECACHE = [
   './',

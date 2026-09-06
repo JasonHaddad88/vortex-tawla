@@ -28,6 +28,74 @@
     6: [0, 2, 3, 5, 6, 8]
   };
 
+  /* ---------------------------------------------------------------- */
+  /* Spoken descriptions                                               */
+  /* ---------------------------------------------------------------- */
+
+  var WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven',
+               'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen',
+               'fourteen', 'fifteen'];
+
+  function count(n) { return WORDS[n] || String(n); }
+  function plural(n, w) { return count(n) + ' ' + w + (n === 1 ? '' : 's'); }
+
+  /* Whose checkers, in words. `names` lets the caller say "your" and
+     "the opponent's" in a solo game and "purple"/"cyan" in a two-player
+     one, where "your" would be ambiguous. */
+  function owner(names, c) { return (names && names[c]) || (c === 'W' ? 'purple' : 'cyan'); }
+
+  /* Possessives need "three OF your checkers"; plain adjectives do not
+     ("three purple checkers"). */
+  function isPossessive(w) { return w === 'your' || /'s$/.test(w); }
+
+  function checkers(n, names, c) {
+    var who = owner(names, c);
+    /* "one of your checkers" — the "one of" construction stays plural,
+       unlike "one purple checker". */
+    return isPossessive(who)
+      ? count(n) + ' of ' + who + ' checkers'
+      : plural(n, who + ' checker');
+  }
+
+  /* A point read aloud. Layers matter: in Mahbooseh a stack can be an
+     enemy checker with yours sitting on top of it, and that is the whole
+     game, so it has to be said rather than implied by a colour. */
+  function describePoint(state, i, names) {
+    var stack = state.points[i];
+    if (!stack.length) return 'Point ' + i + ', empty';
+
+    var run = E.topRun(state.points, i);
+    var below = stack.length - run.len;
+    var s = 'Point ' + i + ', ' + checkers(run.len, names, run.color);
+
+    if (below > 0) {
+      /* Everything under the top run is immobile. */
+      var trapped = {};
+      for (var k = 0; k < below; k++) trapped[stack[k]] = (trapped[stack[k]] || 0) + 1;
+      var parts = [];
+      Object.keys(trapped).forEach(function (c) {
+        parts.push(checkers(trapped[c], names, c));
+      });
+      s += ', on top of ' + parts.join(' and ') + ' trapped underneath';
+    }
+    return s;
+  }
+
+  function describeState(state, i, opts, targets, sources) {
+    var bits = [];
+    if (opts.selected === i) bits.push('selected');
+    if (sources && sources.indexOf(i) >= 0) bits.push('you can move from here');
+    if (targets && targets[i]) {
+      bits.push(targets[i].risk === 'mana' ? 'legal move, warning: leaves the mana'
+              : targets[i].risk === 'blot' ? 'legal move, leaves a blot'
+              : targets[i].pin ? 'legal move, traps a checker'
+              : 'legal move');
+    }
+    if (!bits.length) return '';
+    var s = bits.join(', ');
+    return '. ' + s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
   function el(tag, cls, parent) {
     var n = document.createElement(tag);
     if (cls) n.className = cls;
@@ -78,16 +146,28 @@
 
     host.innerHTML = '';
     var board = el('div', 'board', host);
-    board.setAttribute('role', 'group');
-    board.setAttribute('aria-label', 'Mahbooseh board');
+    var names = opts.names;
+
+    /* One tab stop for the whole board with arrow keys inside it, rather
+       than 26 tab stops. `grid` is the closest standard role: two rows of
+       cells that are navigated spatially. */
+    board.setAttribute('role', opts.interactive ? 'grid' : 'group');
+    board.setAttribute('aria-label', opts.label || 'Board');
 
     var cells = [];
+    var nav = [];                       // [row][col] -> element, for arrows
+    function place(row, col, node) {
+      (nav[row] = nav[row] || [])[col] = node;
+    }
 
     function addRow(list, isTop) {
+      var row = isTop ? 0 : 1;
       for (var c = 0; c < list.length; c++) {
         var n = list[c];
         if (n === 'bar') {
-          if (isTop) addBar(board, state, opts, targets);   // spans both rows
+          /* One element spanning both rows, reachable from either. */
+          var barNode = isTop ? addBar(board, state, opts, targets) : nav[0] && nav[0][c];
+          if (barNode) place(row, c, barNode);
           continue;
         }
         var pt = el('div', pointClasses(n, isTop), board);
@@ -95,6 +175,12 @@
         pt.style.gridRow = isTop ? '1' : '2';
         el('div', 'tri', pt);
         if (numbers) el('div', 'num', pt).textContent = n;
+
+        pt.setAttribute('role', opts.interactive ? 'gridcell' : 'img');
+        pt.dataset.row = row;
+        pt.dataset.col = c;
+        pt.dataset.point = n;
+        place(row, c, pt);
 
         if (opts.selected === n) pt.classList.add('selected');
         /* `movable` is the hint tint; it can be switched off without
@@ -109,15 +195,16 @@
         if (opts.hint && opts.hint.from === n) pt.classList.add('hintsrc');
         if (opts.hint && opts.hint.to === n) pt.classList.add('hintdst');
 
+        /* Read out the contents and then the state, so a blind player
+           can explore the position without seeing it. */
+        pt.setAttribute('aria-label',
+          describePoint(state, n, names) +
+          describeState(state, n, opts, targets, opts.sources || []));
         if (opts.interactive && (sources[n] || targets[n] || opts.selected === n)) {
           pt.classList.add('clickable');
-          pt.tabIndex = 0;
-          pt.setAttribute('role', 'button');
+          pt.setAttribute('aria-selected', opts.selected === n ? 'true' : 'false');
           (function (num) {
             pt.addEventListener('click', function () { opts.onPoint && opts.onPoint(num); });
-            pt.addEventListener('keydown', function (ev) {
-              if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); opts.onPoint && opts.onPoint(num); }
-            });
           })(n);
         }
         cells.push({ n: n, node: pt, isTop: isTop });
@@ -133,14 +220,94 @@
       var tray = el('div', 'tray ' + side, board);
       var colour = side === 'w' ? 'W' : 'B';
       var n = state.off[colour];
+      var who = owner(names, colour);
       el('div', 'tray-label', tray).textContent = (side === 'w' ? 'YOU' : 'OPP') + ' ' + n;
       for (var k = 0; k < n; k++) el('div', 'slab ' + side, tray);
-      if (opts.offTarget && ((side === 'w' && state.turn === 'W') || (side === 'b' && state.turn === 'B'))) {
+
+      var label = who.charAt(0).toUpperCase() + who.slice(1) +
+                  (isPossessive(who) ? '' : "'s") + ' bear-off tray, ' +
+                  plural(n, 'checker') + ' off';
+      var canBearOff = opts.offTarget &&
+        ((side === 'w' && state.turn === 'W') || (side === 'b' && state.turn === 'B'));
+      if (canBearOff) {
         tray.classList.add('target');
+        label += '. Legal move, bear off';
         tray.addEventListener('click', function () { opts.onPoint && opts.onPoint('off'); });
       }
-      tray.title = (side === 'w' ? 'Your' : "Opponent's") + ' borne-off checkers: ' + n;
+      tray.setAttribute('role', opts.interactive ? 'gridcell' : 'img');
+      tray.setAttribute('aria-label', label);
+      tray.title = label;
+      place(side === 'w' ? 1 : 0, 13, tray);
     });
+
+    /* Roving tabindex: exactly one cell is tabbable, arrows move between
+       them. Everything else is -1 so the board is a single tab stop. */
+    if (opts.interactive) {
+      var fr = opts.focus && opts.focus.row, fc = opts.focus && opts.focus.col;
+      if (!nav[fr] || !nav[fr][fc]) {
+        /* Start where the player is most likely to act: the first point
+           they can move from, rather than an empty tray in the corner. */
+        fr = 1; fc = 13;
+        var firstSrc = (opts.sources || []).filter(function (x) { return x !== 'bar'; })[0];
+        if (firstSrc !== undefined) {
+          var found = board.querySelector('.pt[data-point="' + firstSrc + '"]');
+          if (found) { fr = +found.dataset.row; fc = +found.dataset.col; }
+        }
+      }
+      for (var r = 0; r < nav.length; r++) {
+        for (var c2 = 0; nav[r] && c2 < nav[r].length; c2++) {
+          var node = nav[r][c2];
+          if (!node) continue;
+          node.tabIndex = (r === fr && c2 === fc) ? 0 : -1;
+        }
+      }
+      board.addEventListener('keydown', function (ev) {
+        var t = ev.target;
+        if (!t || t.dataset.row === undefined && !t.classList.contains('tray') &&
+            !t.classList.contains('bar')) return;
+
+        var row = +t.dataset.row, col = +t.dataset.col;
+        if (isNaN(row) || isNaN(col)) {
+          /* Bar and trays are placed but do not carry dataset coords. */
+          outer: for (var a = 0; a < nav.length; a++)
+            for (var b = 0; nav[a] && b < nav[a].length; b++)
+              if (nav[a][b] === t) { row = a; col = b; break outer; }
+        }
+        if (isNaN(row) || row === undefined) return;
+
+        var dr = 0, dc = 0;
+        switch (ev.key) {
+          case 'ArrowRight': dc = 1; break;
+          case 'ArrowLeft':  dc = -1; break;
+          case 'ArrowDown':  dr = 1; break;
+          case 'ArrowUp':    dr = -1; break;
+          case 'Home':       col = -1; dc = 1; break;
+          case 'End':        col = 14; dc = -1; break;
+          case 'Enter':
+          case ' ':
+            ev.preventDefault();
+            t.click();
+            return;
+          default: return;
+        }
+        ev.preventDefault();
+
+        /* Step until we land on a real cell, so gaps never trap focus. */
+        var nr = Math.min(1, Math.max(0, row + dr)), nc = col + dc;
+        for (var guard = 0; guard < 16; guard++) {
+          if (nc < 0) { nc = 0; break; }
+          if (nc > 13) { nc = 13; break; }
+          if (nav[nr] && nav[nr][nc]) break;
+          nc += (dc || 1);
+        }
+        var next = nav[nr] && nav[nr][nc];
+        if (!next) return;
+        if (opts.onFocusMove) opts.onFocusMove(nr, nc);
+        next.tabIndex = 0;
+        t.tabIndex = -1;
+        next.focus();
+      });
+    }
 
     /* Second pass: now that the grid has been laid out we know the real
        point geometry, so checkers can be sized and stacked to fit. */
@@ -155,7 +322,13 @@
   function addBar(board, state, opts, targets) {
     var bar = el('div', 'bar', board);
     var v = E.variantOf(state);
-    if (!v.hasBar) return bar;
+    /* In Mahbooseh the spine is pure decoration — nothing is ever sent
+       back — so it is hidden from assistive tech and left out of the
+       keyboard grid rather than sitting there as a silent dead stop. */
+    if (!v.hasBar) {
+      bar.setAttribute('aria-hidden', 'true');
+      return null;
+    }
     bar.classList.add('live');
 
     [['B', 'b', 'up'], ['W', 'w', 'down']].forEach(function (cfg) {
@@ -168,20 +341,22 @@
 
     /* Checkers on the bar must come back before anything else moves, so
        when the bar is the only legal source we say so loudly. */
+    var names = opts.names;
+    var label = 'Bar: ' + checkers(state.bar.W, names, 'W') + ' and ' +
+                checkers(state.bar.B, names, 'B');
     if (opts.sources && opts.sources.indexOf('bar') >= 0) {
       bar.classList.add('movable');
       if (opts.selected === 'bar') bar.classList.add('selected');
+      label += '. You must re-enter before moving anything else';
+      if (opts.selected === 'bar') label += ', selected';
       if (opts.interactive) {
         bar.classList.add('clickable');
-        bar.tabIndex = 0;
-        bar.setAttribute('role', 'button');
-        bar.setAttribute('aria-label', 'Re-enter from the bar');
+        bar.setAttribute('aria-selected', opts.selected === 'bar' ? 'true' : 'false');
         bar.addEventListener('click', function () { opts.onPoint && opts.onPoint('bar'); });
-        bar.addEventListener('keydown', function (ev) {
-          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); opts.onPoint && opts.onPoint('bar'); }
-        });
       }
     }
+    bar.setAttribute('role', opts.interactive ? 'gridcell' : 'img');
+    bar.setAttribute('aria-label', label);
     return bar;
   }
 
@@ -239,5 +414,8 @@
     return render(host, st, Object.assign({ interactive: false }, opts));
   }
 
-  root.Board = { render: render, diagram: diagram, die: die, TOP: TOP, BOT: BOT };
+  root.Board = {
+    render: render, diagram: diagram, die: die,
+    describePoint: describePoint, TOP: TOP, BOT: BOT
+  };
 })(typeof window !== 'undefined' ? window : globalThis);
