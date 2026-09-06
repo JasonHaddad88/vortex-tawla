@@ -30,6 +30,7 @@
     <button class="navlink active" data-view="learn">Learn</button>
     <button class="navlink" data-view="play">Play</button>
     <button class="navlink" data-view="drills">Drills</button>
+    <button class="navlink" data-view="review">Review</button>
     <button class="navlink" data-view="glossary">Glossary</button>
     <button class="btn btn-small" id="btn-install" hidden>Install</button>
   </nav>
@@ -73,6 +74,16 @@
             <option value="easy">Easy</option>
             <option value="normal" selected>Normal</option>
             <option value="hard">Hard</option>
+            <option value="human">Two players</option>
+          </select>
+        </label>
+        <label class="field" style="flex-direction:row;align-items:center;gap:.4rem">
+          Match to
+          <select id="match-target">
+            <option value="1">1 point</option>
+            <option value="3">3 points</option>
+            <option value="5" selected>5 points</option>
+            <option value="7">7 points</option>
           </select>
         </label>
         <label class="field" style="flex-direction:row;align-items:center;gap:.4rem">
@@ -92,8 +103,8 @@
     <div class="play-grid">
       <div>
         <div class="hud">
-          <div class="who w" id="who-w"><span class="dot"></span>You <span class="pips" id="pip-w"></span></div>
-          <div class="who b" id="who-b"><span class="dot"></span>Opponent <span class="pips" id="pip-b"></span></div>
+          <div class="who w" id="who-w"><span class="dot"></span><span id="name-w">You</span> <span class="pips" id="pip-w"></span></div>
+          <div class="who b" id="who-b"><span class="dot"></span><span id="name-b">Opponent</span> <span class="pips" id="pip-b"></span></div>
           <div class="spacer"></div>
           <div class="dice" id="dice"></div>
         </div>
@@ -106,7 +117,8 @@
           <button class="btn" id="btn-done">End turn</button>
           <button class="btn" id="btn-hint">Hint</button>
           <div class="spacer"></div>
-          <button class="btn btn-danger" id="btn-new">New game</button>
+          <button class="btn" id="btn-new">New game</button>
+          <button class="btn btn-danger" id="btn-new-match">New match</button>
         </div>
       </div>
 
@@ -125,6 +137,7 @@
           <div class="stat-row" id="row-pins-w"><span class="k">You have pinned</span><span class="v" id="s-pins-w">0</span></div>
           <div class="stat-row" id="row-pins-b"><span class="k">You are pinned</span><span class="v" id="s-pins-b">0</span></div>
           <div class="stat-row"><span class="k">Match score</span><span class="v" id="s-score">0 – 0</span></div>
+          <div class="stat-row"><span class="k">Match to</span><span class="v" id="s-target">5</span></div>
         </div>
 
         <div class="card">
@@ -157,6 +170,28 @@
     </div>
   </section>
 
+  <!-- =========================== REVIEW ============================ -->
+  <section class="view" id="view-review">
+    <div class="section-head">
+      <h2>Game review</h2>
+      <span class="muted" style="font-size:.78rem" id="review-count"></span>
+    </div>
+    <div id="review-empty" class="card">
+      <p class="muted" style="margin:0">
+        Play a few turns and they will show up here — every turn you play is scored against the
+        best line that was available, so you can see exactly where a game turned.
+      </p>
+    </div>
+    <div id="review-body" hidden>
+      <div class="card" id="review-summary"></div>
+      <div class="card" style="margin-top:1rem">
+        <div class="label" style="margin-bottom:.6rem">Your turns — click one to see the position</div>
+        <div class="timeline" id="review-timeline"></div>
+      </div>
+      <div class="card" id="review-detail" style="margin-top:1rem"></div>
+    </div>
+  </section>
+
   <!-- =========================== GLOSSARY ========================== -->
   <section class="view" id="view-glossary">
     <div class="section-head"><h2>Glossary</h2></div>
@@ -177,6 +212,7 @@
 <script src="assets/js/engine.js"></script>
 <script src="assets/js/ai.js"></script>
 <script src="assets/js/coach.js"></script>
+<script src="assets/js/review.js"></script>
 <script src="assets/js/store.js"></script>
 <script src="assets/js/board.js"></script>
 <script src="assets/js/content.js"></script>

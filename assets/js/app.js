@@ -8,8 +8,20 @@
   'use strict';
 
   var E = window.Engine, AI = window.AI, Board = window.Board, C = window.Content;
-  var Coach = window.Coach, Store = window.Store;
+  var Coach = window.Coach, Store = window.Store, Review = window.Review;
   var $ = function (id) { return document.getElementById(id); };
+
+  var VIEWS = ['learn', 'play', 'drills', 'review', 'glossary'];
+
+  /* Two-player mode is just "no AI": the engine is already symmetric, so
+     everything downstream keys off whose turn it is rather than off the
+     human always being White. */
+  function twoPlayer() { return $('difficulty').value === 'human'; }
+  function matchTarget() { return parseInt($('match-target').value, 10) || 5; }
+  function sideName(p) {
+    if (twoPlayer()) return p === E.W ? 'Purple' : 'Cyan';
+    return p === E.W ? 'You' : 'Opponent';
+  }
 
   /* ================================================================ */
   /* Routing                                                          */
@@ -19,7 +31,7 @@
 
   function show(view) {
     currentView = view;
-    ['learn', 'play', 'drills', 'glossary'].forEach(function (v) {
+    VIEWS.forEach(function (v) {
       $('view-' + v).classList.toggle('active', v === view);
     });
     Array.prototype.forEach.call(document.querySelectorAll('.navlink'), function (b) {
@@ -31,6 +43,7 @@
     if (view === 'learn') renderLesson();
     if (view === 'play') renderPlay();
     if (view === 'drills') renderDrill();
+    if (view === 'review') renderReview();
     if (location.hash.slice(1) !== view) history.replaceState(null, '', '#' + view);
   }
 
@@ -171,17 +184,19 @@
     selected: null,
     hint: null,
     review: null,      // last Coach.reviewTurn result
+    history: [],       // one Review entry per completed turn
     log: [],
     score: { W: 0, B: 0 },
     busy: false,
-    over: false
+    over: false,
+    matchOver: false
   };
 
   function opts() {
     return { manaEndsGame: $('opt-mana').checked, variant: $('variant').value };
   }
 
-  function newGame() {
+  function newGame(keepHistory) {
     G.state = E.newGame(opts());
     G.turnStart = null;
     G.undoStack = [];
@@ -191,11 +206,22 @@
     G.over = false;
     G.busy = false;
     G.log = [];
+    if (!keepHistory) G.history = [];
     flash('');
     var v = E.variantOf(G.state);
-    logLine('W', 'New game — <strong>' + v.name + '</strong>. You are purple and run 24 → 1.');
+    logLine('W', 'New game — <strong>' + v.name + '</strong>. ' +
+      (twoPlayer() ? 'Purple runs 24 → 1, cyan runs 1 → 24.'
+                   : 'You are purple and run 24 → 1.'));
     renderPlay();
+    renderReview();
     save();
+  }
+
+  function newMatch() {
+    G.score = { W: 0, B: 0 };
+    G.matchOver = false;
+    G.history = [];
+    newGame();
   }
 
   function flash(msg, kind) {
@@ -226,7 +252,7 @@
     var s = G.state;
     if (!s) return;
 
-    var myTurn = s.turn === E.W && !G.busy && !G.over;
+    var myTurn = (twoPlayer() || s.turn === E.W) && !G.busy && !G.over;
     var legal = myTurn ? E.legalNow(s) : [];
 
     var v = E.variantOf(s);
@@ -257,7 +283,7 @@
         var risk = coaching ? Coach.moveRisk(s, m) : null;
         targets.push({
           to: m.to,
-          pin: run.color === E.B && run.len === 1,
+          pin: run.color === E.opp(s.turn) && run.len === 1,
           risk: risk ? risk.level : null,
           title: risk ? risk.text : null
         });
@@ -292,7 +318,10 @@
     $('s-pip-b').textContent = pb;
     $('s-off').textContent = s.off.W + ' – ' + s.off.B;
     $('s-score').textContent = G.score.W + ' – ' + G.score.B;
+    $('s-target').textContent = matchTarget();
     $('play-title').textContent = 'Play ' + v.name;
+    $('name-w').textContent = sideName(E.W);
+    $('name-b').textContent = sideName(E.B);
 
     /* The two games care about different things, so show the stats that
        actually apply to the one being played. */
@@ -301,10 +330,13 @@
     $('row-pins-b').hidden = !v.pins;
     if (v.hasBar) $('s-bar').textContent = s.bar.W + ' – ' + s.bar.B;
     if (v.pins) {
-      $('s-pins-w').textContent = E.pinsHeldBy(s.points, E.W).length +
-        (E.manaHeldBy(s.points, E.W, v) ? '  (mana!)' : '');
-      $('s-pins-b').textContent = E.pinnedCheckers(s.points, E.W).length +
-        (E.manaHeldBy(s.points, E.B, v) ? '  (mana!)' : '');
+      /* Reported from the point of view of whoever is on move, so the
+         labels stay true in two-player mode. */
+      var me = twoPlayer() ? s.turn : E.W, them = E.opp(me);
+      $('s-pins-w').textContent = E.pinsHeldBy(s.points, me).length +
+        (E.manaHeldBy(s.points, me, v) ? '  (mana!)' : '');
+      $('s-pins-b').textContent = E.pinnedCheckers(s.points, me).length +
+        (E.manaHeldBy(s.points, them, v) ? '  (mana!)' : '');
     }
 
     /* controls */
@@ -378,7 +410,9 @@
 
   function onPoint(n) {
     var s = G.state;
-    if (s.turn !== E.W || G.busy || G.over) return;
+    /* In two-player mode either side may be on move, so gate on whose
+       turn it is rather than on the human always being White. */
+    if ((!twoPlayer() && s.turn !== E.W) || G.busy || G.over) return;
     var legal = E.legalNow(s);
 
     var srcOf = function (m) { return m.enter ? 'bar' : m.from; };
@@ -415,13 +449,14 @@
     flash('');
 
     var v = E.variantOf(s);
+    var mover = s.turn;
     var note = moveLabel(mv);
     if (r.pinned) note += ' <span class="tag">— pin!</span>';
     if (r.hit) note += ' <span class="tag">— hit!</span>';
     if (r.freed) note += ' <span class="tag">— released</span>';
-    if (v.pins && E.manaHeldBy(s.points, E.W, v) && mv.to === E.startPoint(E.B, v))
+    if (v.pins && E.manaHeldBy(s.points, mover, v) && mv.to === E.startPoint(E.opp(mover), v))
       note += ' <span class="tag">— MANA</span>';
-    logLine(E.W, note);
+    logLine(mover, note);
 
     /* The turn is only worth reviewing once it is actually finished —
        a half-played turn has no meaningful cost yet. */
@@ -433,11 +468,28 @@
   }
 
   function reviewTurn() {
-    if (!$('opt-coach').checked || !G.turnStart || !G.state.played.length) { G.review = null; return; }
+    if (!G.turnStart || !G.state.played.length) { G.review = null; return; }
+    /* Grade even with the coach panel switched off, so the review view
+       still has something to show afterwards. */
     G.review = Coach.reviewTurn(G.turnStart, G.state.played);
-    if (G.review && !G.review.same && Coach.isMistake(G.review.grade)) {
-      logLine(E.W, '<span class="tag">' + G.review.grade.label + '</span> — better was ' +
-                   G.review.bestLine);
+    if ($('opt-coach').checked && G.review && !G.review.same && Coach.isMistake(G.review.grade)) {
+      logLine(G.state.turn, '<span class="tag">' + G.review.grade.label + '</span> — better was ' +
+                            G.review.bestLine);
+    }
+  }
+
+  /* Called once a turn is finished and will not be taken back.
+     `grade` says whether this side's play should be scored — the
+     opponent's turns are recorded for context but not marked. Grading
+     here rather than trusting G.review means a turn is never left
+     ungraded because of the order the UI happened to do things in. */
+  function recordTurn(review, grade) {
+    if (!G.turnStart || !G.state.played.length) return;
+    if (grade && !review) review = Coach.reviewTurn(G.turnStart, G.state.played);
+    var entry = Review.record(G.turnStart, G.state.played, (grade && review) || null);
+    if (entry) {
+      G.history.push(entry);
+      if (G.history.length > 400) G.history.shift();
     }
   }
 
@@ -464,14 +516,15 @@
     G.hint = null;
     G.review = null;
     flash('');
-    logLine(E.W, '<strong>Roll ' + d[0] + '-' + d[1] + '</strong>' + (d[0] === d[1] ? ' (double)' : ''));
+    logLine(s.turn, '<strong>' + (twoPlayer() ? sideName(s.turn) + ' rolls ' : 'Roll ') +
+            d[0] + '-' + d[1] + '</strong>' + (d[0] === d[1] ? ' (double)' : ''));
     save();
 
     if (E.legalNow(s).length === 0) {
       /* Could be an ordinary forfeit, or a position where neither side
          can ever move again — result() tells them apart. */
       if (checkOver()) return;
-      logLine(E.W, 'No legal move — turn forfeited.');
+      logLine(s.turn, 'No legal move — turn forfeited.');
       renderPlay();
       setTimeout(endPlayerTurn, 900);
       return;
@@ -481,23 +534,29 @@
 
   function endPlayerTurn() {
     if (G.over) return;
+    /* Record only now: until the turn is handed over it can still be
+       taken back, and a review of a half-played turn means nothing. */
+    recordTurn(G.review, true);
     E.endTurn(G.state);
     G.turnStart = null;
     G.undoStack = [];
     G.selected = null;
     G.hint = null;
+    G.review = null;
     renderPlay();
+    renderReview();
     save();
-    setTimeout(aiTurn, 500);
+    if (!twoPlayer()) setTimeout(aiTurn, 500);
   }
 
   function aiTurn() {
     var s = G.state;
-    if (G.over || s.turn !== E.B) return;
+    if (G.over || twoPlayer() || s.turn !== E.B) return;
     G.busy = true;
 
     var d = E.rollDice();
     E.setRoll(s, d[0], d[1]);
+    G.turnStart = E.clone(s);
     logLine(E.B, '<strong>Opponent rolls ' + d[0] + '-' + d[1] + '</strong>' + (d[0] === d[1] ? ' (double)' : ''));
     renderPlay();
 
@@ -519,9 +578,12 @@
     (function step() {
       if (i >= plan.length) {
         G.busy = false;
+        recordTurn(null, false);   // opponent turns are logged, not graded
         if (checkOver()) return;
         E.endTurn(s);
+        G.turnStart = null;
         renderPlay();
+        renderReview();
         save();
         return;
       }
@@ -564,12 +626,25 @@
               : res.reason === 'backgammon' ? 'a backgammon (triple game)'
               : res.reason === 'mana' ? 'the mana — an instant double game'
               : 'a single game';
-    flash('<strong>' + (youWon ? 'You win' : 'Opponent wins') + '</strong> — ' + label +
-          ', worth ' + res.points + ' point' + (res.points > 1 ? 's' : '') +
-          '. Match score ' + G.score.W + ' – ' + G.score.B + '.',
-          youWon ? 'success' : 'error');
-    logLine(res.winner, '<strong>Game over: ' + label + '.</strong>');
+
+    var target = matchTarget();
+    G.matchOver = G.score[res.winner] >= target;
+
+    var msg = '<strong>' + sideName(res.winner) + ' win' + (twoPlayer() ? 's' : youWon ? '' : 's') +
+              '</strong> — ' + label + ', worth ' + res.points +
+              ' point' + (res.points > 1 ? 's' : '') + '. ' +
+              'Match score ' + G.score.W + ' – ' + G.score.B + '.';
+    if (G.matchOver) {
+      msg += ' <strong>' + sideName(res.winner) + ' take' + (twoPlayer() || !youWon ? 's' : '') +
+             ' the match to ' + target + '.</strong> Start a new match when you are ready.';
+    } else {
+      msg += ' First to ' + target + '.';
+    }
+    flash(msg, youWon || twoPlayer() ? 'success' : 'error');
+    logLine(res.winner, '<strong>Game over: ' + label + '.</strong>' +
+            (G.matchOver ? ' <span class="tag">Match won ' + G.score.W + '–' + G.score.B + '</span>' : ''));
     renderPlay();
+    renderReview();
     return true;
   }
 
@@ -590,6 +665,7 @@
     return {
       variant: $('variant').value,
       difficulty: $('difficulty').value,
+      matchTarget: matchTarget(),
       hints: $('opt-hints').checked,
       coach: $('opt-coach').checked,
       mana: $('opt-mana').checked
@@ -602,7 +678,12 @@
       game: Store.serialiseGame(G.state, G.turnStart),
       score: G.score,
       over: G.over,
+      matchOver: G.matchOver,
       log: G.log.slice(0, 60),
+      /* Keep the most recent turns only: the review is about the match
+         you are in, and this has to fit in localStorage alongside
+         everything else. */
+      history: G.history.slice(-120),
       settings: settings()
     });
   }
@@ -612,6 +693,7 @@
     if (!s) return;
     if (s.difficulty) $('difficulty').value = s.difficulty;
     if (s.variant && E.VARIANTS[s.variant]) $('variant').value = s.variant;
+    if (s.matchTarget) $('match-target').value = String(s.matchTarget);
     $('opt-hints').checked = s.hints !== false;
     $('opt-coach').checked = s.coach !== false;
     $('opt-mana').checked = !!s.mana;
@@ -644,7 +726,10 @@
     G.review = null;
     G.busy = false;
     G.score = Store.get('score', { W: 0, B: 0 });
+    G.matchOver = !!Store.get('matchOver', false);
     G.log = Store.get('log', []);
+    var hist = Store.get('history', []);
+    G.history = Array.isArray(hist) ? hist : [];
 
     /* The score was already banked when the game ended, so restore the
        over-flag without running it through checkOver again. */
@@ -664,7 +749,9 @@
   $('btn-undo').addEventListener('click', undo);
   $('btn-done').addEventListener('click', endPlayerTurn);
   $('btn-hint').addEventListener('click', showHint);
-  $('btn-new').addEventListener('click', newGame);
+  $('btn-new').addEventListener('click', function () { newGame(true); });
+  $('btn-new-match').addEventListener('click', newMatch);
+  $('match-target').addEventListener('change', function () { this.blur(); renderPlay(); save(); });
   $('opt-hints').addEventListener('change', function () { renderPlay(); save(); });
   $('opt-coach').addEventListener('change', function () {
     if (!$('opt-coach').checked) G.review = null;
@@ -676,10 +763,145 @@
     if (G.state) G.state.opts.manaEndsGame = $('opt-mana').checked;
     save();
   });
-  $('difficulty').addEventListener('change', function () { this.blur(); save(); });
+  $('difficulty').addEventListener('change', function () {
+    this.blur();
+    renderPlay();
+    renderReview();
+    save();
+    /* Switching away from two-player mid-game hands the move back to the
+       opponent if it happens to be their turn. */
+    if (!twoPlayer() && !G.over && !G.busy && G.state.turn === E.B && !G.state.roll.length) {
+      setTimeout(aiTurn, 400);
+    }
+  });
   /* Switching game starts a fresh one — the two variants do not share a
      position, and the match score carries over. */
   $('variant').addEventListener('change', function () { this.blur(); newGame(); });
+
+  /* ================================================================ */
+  /* Review                                                           */
+  /* ================================================================ */
+
+  var reviewPick = null;   // index into G.history
+
+  function renderReview() {
+    var graded = G.history.filter(function (h) { return h.grade != null; });
+    $('review-count').textContent = G.history.length
+      ? G.history.length + ' turns recorded'
+      : '';
+    $('review-empty').hidden = graded.length > 0;
+    $('review-body').hidden = graded.length === 0;
+    if (!graded.length) return;
+
+    var who = twoPlayer() ? null : E.W;
+    var sum = Review.summarise(G.history, who);
+
+    $('review-summary').innerHTML =
+      '<div class="label" style="margin-bottom:.6rem">This match so far</div>' +
+      '<div class="sumgrid">' +
+        sumCell('Turns graded', sum.reviewed) +
+        sumCell('Accuracy', Math.round(sum.accuracy * 100) + '%') +
+        sumCell('Total cost', sum.totalCost.toFixed(1)) +
+        sumCell('Average', sum.avgCost.toFixed(1)) +
+      '</div>' +
+      '<div class="row" style="margin-top:.8rem">' +
+        Review.ORDER.map(function (k) {
+          var n = sum.counts[k];
+          if (!n) return '';
+          var tone = k === 'best' || k === 'good' ? 'ok' : k === 'blunder' ? 'bad' : 'warn';
+          return '<span class="badge ' + tone + '">' + n + ' ' + k + '</span>';
+        }).join('') +
+      '</div>' +
+      (sum.worst ? '<p class="lead" style="margin:.8rem 0 0;font-size:.82rem;color:var(--subtle)">' +
+        'Costliest turn: <strong>' + sum.worst.playedLine + '</strong> — ' +
+        sum.worst.loss.toFixed(1) + ' lost.</p>' : '');
+
+    /* Timeline: one bar per graded turn, height by cost. */
+    var maxLoss = 0;
+    graded.forEach(function (h) { maxLoss = Math.max(maxLoss, h.loss || 0); });
+    var tl = $('review-timeline');
+    tl.innerHTML = '';
+    graded.forEach(function (h) {
+      var idx = G.history.indexOf(h);
+      var b = document.createElement('button');
+      var tone = h.grade === 'best' || h.grade === 'good' ? 'ok'
+               : h.grade === 'blunder' ? 'bad' : 'warn';
+      b.className = 'tbar ' + tone + (idx === reviewPick ? ' picked' : '');
+      /* A floor so a perfect turn is still a visible, clickable target. */
+      var pct = maxLoss > 0 ? Math.max(8, ((h.loss || 0) / maxLoss) * 100) : 8;
+      b.innerHTML = '<span style="height:' + pct + '%"></span>';
+      b.title = h.roll.join('-') + ': ' + h.playedLine + ' — ' + h.gradeLabel +
+                (h.loss ? ' (cost ' + h.loss.toFixed(1) + ')' : '');
+      b.addEventListener('click', function () { reviewPick = idx; renderReview(); });
+      tl.appendChild(b);
+    });
+
+    if (reviewPick == null || !G.history[reviewPick] || G.history[reviewPick].grade == null) {
+      /* Default to the turn most worth looking at. */
+      var worstIdx = -1, worstLoss = -1;
+      graded.forEach(function (h) {
+        if ((h.loss || 0) > worstLoss) { worstLoss = h.loss || 0; worstIdx = G.history.indexOf(h); }
+      });
+      reviewPick = worstIdx;
+    }
+    renderReviewDetail();
+  }
+
+  function sumCell(k, v) {
+    return '<div class="sumcell"><div class="k">' + k + '</div><div class="v">' + v + '</div></div>';
+  }
+
+  /* Mirrors the Coach panel's wording so the two never disagree: a turn
+     graded "Best play" must not also be told it should have done
+     something else. */
+  function detailVerdict(h) {
+    if (h.grade == null) {
+      return 'Opponent played <span class="neutral">' + h.playedLine + '</span>';
+    }
+    if (h.same || !h.bestLine) {
+      return 'You played <span class="better">' + h.playedLine + '</span>' +
+             '<p class="lead">That was the best line available.</p>';
+    }
+    if (!Coach.isMistake({ key: h.grade })) {
+      return 'You played <span class="neutral">' + h.playedLine + '</span>' +
+             '<p class="lead">Sound. The engine marginally prefers <strong>' + h.bestLine +
+             '</strong>, but there is next to nothing in it.</p>';
+    }
+    return 'You played <span class="played">' + h.playedLine + '</span>' +
+           'Better was <span class="better">' + h.bestLine + '</span>' +
+           (h.why ? '<p class="lead">Because ' + h.why + '.</p>' : '');
+  }
+
+  function renderReviewDetail() {
+    var h = G.history[reviewPick];
+    var host = $('review-detail');
+    if (!h) { host.innerHTML = ''; return; }
+
+    var st = Review.stateFor(h);
+    var tone = h.grade === 'best' || h.grade === 'good' ? 'ok'
+             : h.grade === 'blunder' ? 'bad' : 'warn';
+
+    host.innerHTML =
+      '<div class="row" style="margin-bottom:.7rem">' +
+        '<span class="badge ' + tone + '">' + (h.gradeLabel || 'Played') + '</span>' +
+        '<span class="muted" style="font-size:.78rem">Rolled ' + h.roll.join('-') + '</span>' +
+        (h.loss ? '<span class="muted" style="font-size:.78rem">cost ' + h.loss.toFixed(1) + '</span>' : '') +
+      '</div>' +
+      '<div class="board-wrap" id="review-board"></div>' +
+      '<div class="coach-body" style="margin-top:.8rem">' + detailVerdict(h) + '</div>';
+
+    /* The position as it stood when the dice were thrown, with the moves
+       that were actually played highlighted. */
+    /* Show both ends of each move: where the checkers came from and
+       where they went. */
+    Board.render($('review-board'), st, {
+      interactive: false,
+      showSources: true,
+      sources: h.played.map(function (m) { return m.enter ? 'bar' : m.from; }),
+      targets: h.played.filter(function (m) { return !m.off; })
+                       .map(function (m) { return { to: m.to }; })
+    });
+  }
 
   /* ================================================================ */
   /* Drills                                                           */
@@ -818,8 +1040,10 @@
   if (!resumed) newGame();
   loadDrill();
 
+  renderReview();
+
   var start = location.hash.slice(1);
-  show(['learn', 'play', 'drills', 'glossary'].indexOf(start) >= 0 ? start : 'learn');
+  show(VIEWS.indexOf(start) >= 0 ? start : 'learn');
 
   /* A game saved mid-AI-turn resumes with the opponent still on move. */
   if (resumed && !G.over && G.state.turn === E.B) setTimeout(aiTurn, 600);

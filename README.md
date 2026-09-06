@@ -10,7 +10,8 @@ Two of the three games of a session are playable:
   backgammon triple. Six lessons.
 - **Gulbahar** (چول بارا) — not implemented yet; see the note at the end.
 
-A playable board with a real rules engine and an opponent, a coach that reviews every turn, five
+A playable board with a real rules engine and an opponent, a coach that reviews every turn, a
+game review you can step back through, matches to 5 or 7 points, two-player pass-and-play, five
 graded drills, and a glossary with the Persian-derived dice calls. Your game, match score and
 progress survive a refresh, and it installs as an offline app.
 
@@ -42,6 +43,7 @@ server for you.
 | `assets/js/engine.js` | Mahbooseh rules. Pure, no DOM |
 | `assets/js/ai.js` | Position evaluator and the opponent |
 | `assets/js/coach.js` | Turn review and pre-move risk warnings |
+| `assets/js/review.js` | Per-turn history and match statistics |
 | `assets/js/store.js` | localStorage persistence |
 | `assets/js/board.js` | DOM board renderer |
 | `assets/js/content.js` | Lessons, glossary, drills |
@@ -123,6 +125,25 @@ times *the pips the blot would lose*, since a hit checker restarts from 25.
 `tests.js` asserts the evaluator's preferred line agrees with every drill's stated answer, so the
 app cannot tell a learner two different things.
 
+**A caveat worth stating plainly.** The coach and the opponent are one-ply: they score the
+positions each legal way of playing the roll leads to, with hand-tuned weights, and pick the best.
+There is no lookahead. That is enough to catch real mistakes — it will always spot a missed mana or
+a blot left in range — but "best play" is a strong opinion, not a solved answer, and in quiet
+positions the difference between its top few lines is mostly noise. Searching a move deeper
+(averaging the opponent's best reply over all 21 dice combinations) is the obvious next
+improvement, and would raise the opponent and the coach together.
+
+## Review
+
+Every completed turn is recorded with the position **as it stood when the dice were thrown**, which
+is what makes the Review tab a review rather than a list — the board can be redrawn for any turn
+without replaying the game. Positions are stored in the same compact bottom-first spec form the
+lessons use, so a whole match is a few kilobytes and survives in localStorage.
+
+The tab shows accuracy and total cost for the match, a timeline of your turns coloured by grade
+(click a bar to see that position), and the costliest turn called out. Opponent turns are recorded
+for context but not graded — except in two-player mode, where both sides are.
+
 ## Installing it
 
 Served over http(s) the app is a PWA: it installs to a home screen and works fully offline, which
@@ -182,7 +203,12 @@ count, which only lands if the geometry is right), hitting and the bar, forced r
 board, bear-off being blocked while anything is on the bar, gammon and backgammon scoring, and 25
 self-played games checked for checker drift across the bar.
 
-Current status: **293 browser assertions and 27 service-worker assertions, 0 failing.**
+The review module is covered too: that a recorded position rebuilds to exactly the board it was
+taken from, that it survives the JSON round-trip localStorage puts it through, that bar and
+borne-off counts are preserved, and that the match statistics do not divide by zero on an empty
+history.
+
+Current status: **326 browser assertions and 27 service-worker assertions, 0 failing.**
 
 ## Still to do: Gulbahar
 

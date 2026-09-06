@@ -566,6 +566,107 @@
   })();
 
   /* ---------------------------------------------------------------- */
+  describe('Review');
+
+  var Review = window.Review;
+
+  (function () {
+    /* Record a real turn and make sure the position round-trips, since
+       the whole point of the review is redrawing the board for any turn
+       without replaying the game. */
+    var s = E.newGame();
+    E.setRoll(s, 6, 5);
+    var start = E.clone(s);
+    var plan = window.AI.choosePlan(s, 'hard');
+    plan.forEach(function (m) { E.apply(s, m); });
+    var rev = Coach.reviewTurn(start, s.played);
+
+    var entry = Review.record(start, s.played, rev);
+    ok('a turn is recorded', !!entry);
+    eq('with the mover', entry.who, 'W');
+    eq('the roll', entry.roll.join('-'), '6-5');
+    eq('and the moves', entry.played.length, plan.length);
+    ok('the played line is readable', /→/.test(entry.playedLine));
+    ok('the grade is carried over', !!entry.grade);
+
+    var back = Review.stateFor(entry);
+    ok('the position rebuilds', !!back);
+    eq('with 15 White', E.countOn(back.points, 'W'), 15);
+    eq('with 15 Black', E.countOn(back.points, 'B'), 15);
+    var same = true;
+    for (var i = 1; i <= 24; i++)
+      if (back.points[i].join('') !== start.points[i].join('')) same = false;
+    ok('and matches the board at roll time exactly', same);
+
+    /* It must survive the same JSON trip localStorage puts it through. */
+    var trip = Review.stateFor(JSON.parse(JSON.stringify(entry)));
+    var same2 = true;
+    for (i = 1; i <= 24; i++)
+      if (trip.points[i].join('') !== start.points[i].join('')) same2 = false;
+    ok('and survives a JSON round-trip', same2);
+
+    ok('nothing is recorded for an empty turn', Review.record(start, [], null) === null);
+  })();
+
+  (function () {
+    /* An opponent turn is recorded but not graded. */
+    var s = E.newGame();
+    s.turn = 'B';
+    E.setRoll(s, 3, 1);
+    var start = E.clone(s);
+    var plan = window.AI.choosePlan(s, 'hard');
+    plan.forEach(function (m) { E.apply(s, m); });
+    var entry = Review.record(start, s.played, null);
+    eq('the opponent turn is recorded', entry.who, 'B');
+    eq('but carries no grade', entry.grade, null);
+    eq('and no best line', entry.bestLine, null);
+  })();
+
+  (function () {
+    var hist = [
+      { who: 'W', grade: 'best',       loss: 0,    playedLine: 'a' },
+      { who: 'W', grade: 'inaccuracy', loss: 6,    playedLine: 'b' },
+      { who: 'W', grade: 'blunder',    loss: 140,  playedLine: 'c' },
+      { who: 'B', grade: null,         loss: null, playedLine: 'd' },
+      { who: 'W', grade: 'good',       loss: 1.5,  playedLine: 'e' }
+    ];
+    var sum = Review.summarise(hist, 'W');
+    eq('counts only the chosen side', sum.turns, 4);
+    eq('grades only the graded turns', sum.reviewed, 4);
+    eq('totals the cost', sum.totalCost, 147.5);
+    eq('counts blunders', sum.counts.blunder, 1);
+    eq('counts errors', sum.errors, 2);
+    eq('accuracy is the non-error share', sum.accuracy, 0.5);
+    eq('and finds the costliest turn', sum.worst.playedLine, 'c');
+
+    var all = Review.summarise(hist);
+    eq('without a side filter it counts every turn', all.turns, 5);
+
+    var empty = Review.summarise([], 'W');
+    eq('an empty history has no turns', empty.turns, 0);
+    eq('and does not divide by zero', empty.avgCost, 0);
+    eq('with perfect accuracy by default', empty.accuracy, 1);
+    ok('and no worst turn', empty.worst === null);
+  })();
+
+  (function () {
+    /* Bar and borne-off counts have to survive, or a mid-game
+       Fransawiyyeh turn redraws wrong. */
+    var s = E.fromSpec({ 13: 'WWWWW', 8: 'WWW', 6: 'WWWWW', 4: 'W',
+                         1: 'BB', 12: 'BBBBB', 17: 'BBB', 19: 'BBBBB' },
+                       'W', { variant: 'fransawiyyeh', bar: { W: 1, B: 0 } });
+    E.setRoll(s, 3, 5);
+    var start = E.clone(s);
+    E.apply(s, E.legalNow(s)[0]);
+    var entry = Review.record(start, s.played, null);
+    var back = Review.stateFor(JSON.parse(JSON.stringify(entry)));
+    eq('the variant is preserved', back.variantId, 'fransawiyyeh');
+    eq('the bar is preserved', back.bar.W, 1);
+    eq('White still totals 15', E.countOn(back.points, 'W') + back.bar.W + back.off.W, 15);
+    eq('Black still totals 15', E.countOn(back.points, 'B') + back.bar.B + back.off.B, 15);
+  })();
+
+  /* ---------------------------------------------------------------- */
   describe('Persistence');
 
   (function () {

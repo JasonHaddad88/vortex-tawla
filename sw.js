@@ -10,7 +10,7 @@
  * missing from this list only shows up as a broken app on a train.
  * ===================================================================== */
 
-var CACHE = 'vortex-tawla-v4';
+var CACHE = 'vortex-tawla-v5';
 
 var PRECACHE = [
   './',
@@ -21,6 +21,7 @@ var PRECACHE = [
   'assets/js/engine.js',
   'assets/js/ai.js',
   'assets/js/coach.js',
+  'assets/js/review.js',
   'assets/js/store.js',
   'assets/js/board.js',
   'assets/js/content.js',
