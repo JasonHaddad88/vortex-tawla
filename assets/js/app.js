@@ -62,6 +62,32 @@
   });
 
   /* ---------------------------------------------------------------- */
+  /* Themes                                                            */
+  /* ---------------------------------------------------------------- */
+
+  var THEMES = ['vortex', 'nova', 'qahwa'];
+
+  function applyTheme(id) {
+    if (THEMES.indexOf(id) < 0) id = 'vortex';
+    document.documentElement.setAttribute('data-theme', id);
+    $('theme').value = id;
+    /* Keep the PWA's browser/status-bar colour in step with the theme —
+       otherwise an installed Nova reads as a light app in a black frame.
+       Read it back from the cascade so there is one source of truth. */
+    var bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta && bg) meta.setAttribute('content', bg);
+  }
+
+  $('theme').addEventListener('change', function () {
+    applyTheme(this.value);
+    this.blur();
+    save();
+    /* Boards read their sizes from the DOM, so redraw after a repaint. */
+    setTimeout(function () { show(currentView); }, 0);
+  });
+
+  /* ---------------------------------------------------------------- */
   /* Screen-reader narration                                           */
   /* ---------------------------------------------------------------- */
 
@@ -752,6 +778,7 @@
 
   function settings() {
     return {
+      theme: $('theme').value,
       variant: $('variant').value,
       difficulty: $('difficulty').value,
       matchTarget: matchTarget(),
@@ -780,6 +807,7 @@
   function loadSettings() {
     var s = Store.get('settings', null);
     if (!s) return;
+    if (s.theme) applyTheme(s.theme);
     if (s.difficulty) $('difficulty').value = s.difficulty;
     if (s.variant && E.VARIANTS[s.variant]) $('variant').value = s.variant;
     if (s.matchTarget) $('match-target').value = String(s.matchTarget);
@@ -1128,6 +1156,9 @@
   /* ================================================================ */
 
   loadSettings();
+  /* The inline boot script already set the attribute; this syncs the
+     picker and the theme-colour meta with it. */
+  applyTheme(document.documentElement.getAttribute('data-theme') || 'vortex');
 
   var progress = Store.get('progress', null);
   if (progress) {

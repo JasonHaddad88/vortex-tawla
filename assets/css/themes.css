@@ -1,0 +1,258 @@
+/* =====================================================================
+ * Vortex Tawla — themes
+ * ---------------------------------------------------------------------
+ * Every colour in the app comes from a token defined here. Nothing else
+ * hardcodes one, which is what lets a theme change the whole product —
+ * banner, background, board, checkers, dice — from a single attribute on
+ * <html data-theme="…">.
+ *
+ * Adding a theme means filling in this contract and nothing else:
+ *
+ *   ground      --bg --halo-1 --halo-2 --surface --surface-2 --glass
+ *   ink         --text --muted --subtle
+ *   line        --border --border-strong
+ *   accents     --accent(-glow -wash -tint) --accent-2(-glow -wash)
+ *   brand       --brand-1 --brand-2 --logo-core
+ *   status      --danger --success --warning
+ *   board       --board-1 --board-2 --board-edge --board-inner
+ *               --pt-a --pt-b --bar-1 --bar-2 --tray-bg
+ *   board state --pt-movable --pt-selected --pt-target --pt-target-pin
+ *               --pt-risk-blot --pt-risk-mana --pt-hint-src --pt-hint-dst
+ *   checkers    --chk-w(-hi -lo -rim) --chk-b(-hi -lo -rim) --chk-b-inset
+ *   dice        --die-1 --die-2 --die-pip --die-glow
+ *   focus       --focus-ring
+ *
+ * --muted is body text (labels, captions, stat keys), so every theme's
+ * value has to clear WCAG AA 4.5:1 against --surface-2. tests.html
+ * measures it rather than trusting the eye.
+ * ===================================================================== */
+
+/* ---------------------------------------------------------------------
+ * VORTEX — the original. Black ground, purple and cyan, neon glow.
+ * Palette ported from VortexPortal's hub/templates.py.
+ * ------------------------------------------------------------------- */
+:root,
+:root[data-theme="vortex"] {
+  --bg:            #06060a;
+  --halo-1:        rgba(168, 85, 247, 0.10);
+  --halo-2:        rgba(103, 232, 249, 0.08);
+  --surface:       #0e0e18;
+  --surface-2:     #14141f;
+  --glass:         rgba(14, 14, 24, 0.72);
+
+  --text:          #e2e8f0;
+  --muted:         #7c8492;
+  --subtle:        #9ca3af;
+
+  --border:        rgba(168, 85, 247, 0.18);
+  --border-strong: rgba(168, 85, 247, 0.45);
+
+  --accent:        #a855f7;
+  --accent-glow:   rgba(168, 85, 247, 0.45);
+  --accent-wash:   rgba(168, 85, 247, 0.10);
+  --accent-tint:   rgba(168, 85, 247, 0.22);
+  --accent-2:      #67e8f9;
+  --accent-2-glow: rgba(103, 232, 249, 0.40);
+  --accent-2-wash: rgba(103, 232, 249, 0.10);
+
+  --brand-1:       var(--accent);
+  --brand-2:       var(--accent-2);
+  --logo-core:     var(--bg);
+
+  --danger:        #ef4444;
+  --success:       #34d399;
+  --warning:       #fbbf24;
+
+  --board-1:       #0b0b14;
+  --board-2:       #10101c;
+  --board-edge:    var(--border-strong);
+  --board-inner:   rgba(168, 85, 247, 0.05);
+  --board-shadow:  rgba(0, 0, 0, 0.55);
+  --pt-a:          rgba(168, 85, 247, 0.13);
+  --pt-b:          rgba(103, 232, 249, 0.09);
+  --bar-1:         rgba(168, 85, 247, 0.10);
+  --bar-2:         rgba(103, 232, 249, 0.08);
+  --tray-bg:       rgba(0, 0, 0, 0.35);
+
+  --pt-movable:    rgba(168, 85, 247, 0.22);
+  --pt-selected:   rgba(168, 85, 247, 0.34);
+  --pt-target:     rgba(52, 211, 153, 0.26);
+  --pt-target-pin: rgba(251, 191, 36, 0.30);
+  --pt-risk-blot:  rgba(251, 191, 36, 0.20);
+  --pt-risk-mana:  rgba(239, 68, 68, 0.34);
+  --pt-hint-src:   rgba(103, 232, 249, 0.28);
+  --pt-hint-dst:   rgba(103, 232, 249, 0.20);
+
+  --chk-w:         #a855f7;
+  --chk-w-hi:      #c98bff;
+  --chk-w-lo:      #7326b8;
+  --chk-w-rim:     #d8b4fe;
+  --chk-b:         #67e8f9;
+  --chk-b-hi:      #b9f6ff;
+  --chk-b-lo:      #17869c;
+  --chk-b-rim:     #cffafe;
+  --chk-b-inset:   rgba(6, 6, 10, 0.55);
+
+  --die-1:         #f5f3ff;
+  --die-2:         #d8cfe8;
+  --die-pip:       #14141f;
+  --die-glow:      var(--accent-glow);
+
+  --focus-ring:    var(--accent-2);
+}
+
+/* ---------------------------------------------------------------------
+ * NOVA — brushed silver under glass, lit from the front. The only light
+ * theme, so the ink inverts: dark text on a bright ground. Borders are
+ * a cold electric blue with a soft outward bloom, and the checkers drop
+ * colour entirely for graphite and near-black.
+ * ------------------------------------------------------------------- */
+:root[data-theme="nova"] {
+  --bg:            #dfe4ec;
+  --halo-1:        rgba(255, 255, 255, 0.85);
+  --halo-2:        rgba(120, 180, 255, 0.22);
+  --surface:       #f2f5f9;
+  --surface-2:     #e6ebf2;
+  --glass:         rgba(246, 249, 253, 0.72);
+
+  --text:          #131722;
+  --muted:         #4d5768;
+  --subtle:        #333c4b;
+
+  --border:        rgba(60, 140, 235, 0.30);
+  --border-strong: rgba(60, 140, 235, 0.62);
+
+  --accent:        #2f7fd8;
+  --accent-glow:   rgba(80, 165, 255, 0.55);
+  --accent-wash:   rgba(80, 165, 255, 0.14);
+  --accent-tint:   rgba(80, 165, 255, 0.26);
+  --accent-2:      #1d6fbe;
+  --accent-2-glow: rgba(120, 195, 255, 0.55);
+  --accent-2-wash: rgba(120, 195, 255, 0.16);
+
+  --brand-1:       #8fa3bd;
+  --brand-2:       #4da3ff;
+  --logo-core:     #eef2f7;
+
+  --danger:        #c02626;
+  --success:       #10714d;
+  --warning:       #8a5a00;
+
+  /* Glass: a pale silver sheet, edge-lit rather than filled. */
+  --board-1:       #eaeef4;
+  --board-2:       #dde3ec;
+  --board-edge:    rgba(60, 140, 235, 0.55);
+  --board-inner:   rgba(255, 255, 255, 0.75);
+  --board-shadow:  rgba(70, 100, 140, 0.28);
+  --pt-a:          rgba(126, 145, 170, 0.30);
+  --pt-b:          rgba(96, 160, 225, 0.20);
+  --bar-1:         rgba(255, 255, 255, 0.65);
+  --bar-2:         rgba(120, 180, 255, 0.20);
+  --tray-bg:       rgba(255, 255, 255, 0.55);
+
+  --pt-movable:    rgba(80, 165, 255, 0.34);
+  --pt-selected:   rgba(47, 127, 216, 0.48);
+  --pt-target:     rgba(16, 145, 100, 0.34);
+  --pt-target-pin: rgba(200, 130, 0, 0.36);
+  --pt-risk-blot:  rgba(200, 130, 0, 0.26);
+  --pt-risk-mana:  rgba(192, 38, 38, 0.34);
+  --pt-hint-src:   rgba(47, 127, 216, 0.34);
+  --pt-hint-dst:   rgba(47, 127, 216, 0.24);
+
+  /* Graphite and near-black, per the brief. */
+  --chk-w:         #aeb6c2;
+  --chk-w-hi:      #eef1f6;
+  --chk-w-lo:      #6f7887;
+  --chk-w-rim:     #5b6676;   /* dark outline: the fill is nearly the
+                                 board's own colour, so the rim is what
+                                 makes the checker findable (5.0:1) */
+  --chk-b:         #2b2f38;
+  --chk-b-hi:      #5c6472;
+  --chk-b-lo:      #0d0f14;
+  --chk-b-rim:     #767e8c;
+  --chk-b-inset:   rgba(235, 240, 248, 0.40);
+
+  --die-1:         #ffffff;
+  --die-2:         #ccd5e2;
+  --die-pip:       #10131a;
+  --die-glow:      rgba(80, 165, 255, 0.45);
+
+  --focus-ring:    #1a5fb4;
+}
+
+/* ---------------------------------------------------------------------
+ * QAHWA — the coffeehouse table. قهوة. Walnut frame, inlaid points in
+ * two woods, bone and dark-wood checkers, brass fittings. What a real
+ * tawla actually looks like in Beirut, Damascus or Amman.
+ * ------------------------------------------------------------------- */
+:root[data-theme="qahwa"] {
+  --bg:            #1b120a;
+  --halo-1:        rgba(198, 142, 62, 0.12);
+  --halo-2:        rgba(90, 46, 20, 0.35);
+  --surface:       #2a1c11;
+  --surface-2:     #332315;
+  --glass:         rgba(42, 28, 17, 0.80);
+
+  --text:          #f4e7d2;
+  --muted:         #b79a76;
+  --subtle:        #d8c3a2;
+
+  --border:        rgba(198, 142, 62, 0.28);
+  --border-strong: rgba(214, 168, 92, 0.60);
+
+  --accent:        #d1a24c;
+  --accent-glow:   rgba(209, 162, 76, 0.40);
+  --accent-wash:   rgba(209, 162, 76, 0.12);
+  --accent-tint:   rgba(209, 162, 76, 0.24);
+  --accent-2:      #62a88b;
+  --accent-2-glow: rgba(98, 168, 139, 0.38);
+  --accent-2-wash: rgba(98, 168, 139, 0.12);
+
+  --brand-1:       #d1a24c;
+  --brand-2:       #8c5a2b;
+  --logo-core:     var(--bg);
+
+  --danger:        #d4674a;
+  --success:       #7fbf92;
+  --warning:       #e8b552;
+
+  /* Two woods, as an inlaid board would be. */
+  --board-1:       #3b2716;
+  --board-2:       #2a1b0f;
+  --board-edge:    rgba(214, 168, 92, 0.55);
+  --board-inner:   rgba(0, 0, 0, 0.30);
+  --board-shadow:  rgba(0, 0, 0, 0.60);
+  --pt-a:          rgba(226, 190, 132, 0.30);
+  --pt-b:          rgba(120, 62, 30, 0.55);
+  --bar-1:         rgba(140, 90, 43, 0.45);
+  --bar-2:         rgba(90, 55, 26, 0.55);
+  --tray-bg:       rgba(0, 0, 0, 0.35);
+
+  --pt-movable:    rgba(209, 162, 76, 0.30);
+  --pt-selected:   rgba(209, 162, 76, 0.48);
+  --pt-target:     rgba(98, 168, 139, 0.34);
+  --pt-target-pin: rgba(232, 181, 82, 0.38);
+  --pt-risk-blot:  rgba(232, 181, 82, 0.24);
+  --pt-risk-mana:  rgba(212, 103, 74, 0.40);
+  --pt-hint-src:   rgba(98, 168, 139, 0.32);
+  --pt-hint-dst:   rgba(98, 168, 139, 0.22);
+
+  /* Bone and dark walnut. */
+  --chk-w:         #e6d5b4;
+  --chk-w-hi:      #fbf3e2;
+  --chk-w-lo:      #a98f66;
+  --chk-w-rim:     #fffaf0;
+  --chk-b:         #4a2e18;
+  --chk-b-hi:      #7d5230;
+  --chk-b-lo:      #23140a;
+  --chk-b-rim:     #b8875a;   /* 4.5:1 against the board; the fill
+                                 alone is 1.1:1, as real wood would be */
+  --chk-b-inset:   rgba(240, 224, 196, 0.34);
+
+  --die-1:         #f7ecd6;
+  --die-2:         #d9c3a0;
+  --die-pip:       #2a1b0f;
+  --die-glow:      rgba(209, 162, 76, 0.40);
+
+  --focus-ring:    #f0c874;
+}

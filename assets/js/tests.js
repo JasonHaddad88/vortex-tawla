@@ -888,6 +888,116 @@
   })();
 
   /* ---------------------------------------------------------------- */
+  describe('Themes');
+
+  (function () {
+    var THEMES = ['vortex', 'nova', 'qahwa'];
+
+    /* Every colour the app draws must come from one of these. A theme
+       that leaves one out inherits the previous theme's value and looks
+       broken in a way that is easy to miss by eye. */
+    var TOKENS = [
+      'bg', 'halo-1', 'halo-2', 'surface', 'surface-2', 'glass',
+      'text', 'muted', 'subtle', 'border', 'border-strong',
+      'accent', 'accent-glow', 'accent-wash', 'accent-tint',
+      'accent-2', 'accent-2-glow', 'accent-2-wash',
+      'brand-1', 'brand-2', 'logo-core',
+      'danger', 'success', 'warning',
+      'board-1', 'board-2', 'board-edge', 'board-inner', 'board-shadow',
+      'pt-a', 'pt-b', 'bar-1', 'bar-2', 'tray-bg',
+      'pt-movable', 'pt-selected', 'pt-target', 'pt-target-pin',
+      'pt-risk-blot', 'pt-risk-mana', 'pt-hint-src', 'pt-hint-dst',
+      'chk-w', 'chk-w-hi', 'chk-w-lo', 'chk-w-rim',
+      'chk-b', 'chk-b-hi', 'chk-b-lo', 'chk-b-rim', 'chk-b-inset',
+      'die-1', 'die-2', 'die-pip', 'die-glow', 'focus-ring'
+    ];
+
+    /* Resolve a token to real rgb by letting the browser compute it. */
+    var probe = document.createElement('div');
+    probe.style.display = 'none';
+    document.body.appendChild(probe);
+
+    function tokenValue(name) {
+      return getComputedStyle(document.documentElement).getPropertyValue('--' + name).trim();
+    }
+    function rgbOf(value) {
+      probe.style.color = '';
+      probe.style.color = value;
+      var c = getComputedStyle(probe).color;
+      var m = c.match(/rgba?\(([\d.]+),\s*([\d.]+),\s*([\d.]+)/);
+      return m ? [+m[1], +m[2], +m[3]] : null;
+    }
+    function lum(rgb) {
+      var v = rgb.map(function (x) {
+        x = x / 255;
+        return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+      });
+      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+    }
+    function ratio(a, b) {
+      var l1 = lum(a), l2 = lum(b);
+      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    }
+
+    var original = document.documentElement.getAttribute('data-theme');
+
+    THEMES.forEach(function (t) {
+      document.documentElement.setAttribute('data-theme', t);
+
+      var missing = TOKENS.filter(function (k) { return !tokenValue(k); });
+      eq(t + ': defines every token', missing.join(','), '');
+
+      /* --text and --muted are both real body text. Anything under
+         4.5:1 is unreadable for a lot of people, so it is measured
+         rather than eyeballed. */
+      var surfaces = ['bg', 'surface', 'surface-2'].map(function (k) { return rgbOf(tokenValue(k)); });
+      ['text', 'muted', 'subtle'].forEach(function (ink) {
+        var fg = rgbOf(tokenValue(ink));
+        if (!fg) { ok(t + ': ' + ink + ' resolves', false); return; }
+        var worst = Math.min.apply(null, surfaces.map(function (bgc) { return ratio(fg, bgc); }));
+        ok(t + ': --' + ink + ' clears AA on every surface',
+           worst >= 4.5, 'worst ratio ' + worst.toFixed(2));
+      });
+
+      /* The two sides must be tellable apart WITHOUT relying on hue,
+         since a good fraction of players cannot use hue reliably. Two
+         ways to satisfy that: enough difference in lightness, or a
+         non-colour marking. Vortex's purple and cyan are a brand pair
+         that sit close in luminance (2.7:1), so it takes the second
+         route — the cyan checkers carry an inset ring. Either is fine;
+         having neither is not. */
+      var w = rgbOf(tokenValue('chk-w')), b = rgbOf(tokenValue('chk-b'));
+      var byLightness = ratio(w, b);
+      probe.style.color = tokenValue('chk-b-inset');
+      var insetAlpha = (getComputedStyle(probe).color.match(/rgba\([^)]*,\s*([\d.]+)\)/) || [0, 1])[1];
+      ok(t + ': the two sides are distinguishable without colour',
+         byLightness >= 3 || +insetAlpha > 0.2,
+         'lightness ratio ' + byLightness.toFixed(2) + ', ring alpha ' + insetAlpha);
+
+      /* Dice pips against the die face. */
+      ok(t + ': dice pips are legible',
+         ratio(rgbOf(tokenValue('die-pip')), rgbOf(tokenValue('die-1'))) >= 4.5);
+
+      /* A checker has to be findable against the board it sits on —
+         WCAG's 3:1 for non-text UI. Either the fill carries it or the rim
+         does, which is the point of having a rim at all. Nova's silver
+         checkers are 1.8:1 on a silver board and are saved entirely by
+         their outline; Qahwa's dark walnut on dark walnut likewise. */
+      var board = rgbOf(tokenValue('board-1'));
+      [['w', 'light'], ['b', 'dark']].forEach(function (side) {
+        var fill = ratio(rgbOf(tokenValue('chk-' + side[0])), board);
+        var rim = ratio(rgbOf(tokenValue('chk-' + side[0] + '-rim')), board);
+        ok(t + ': the ' + side[1] + ' checkers stand out from the board',
+           Math.max(fill, rim) >= 3,
+           'fill ' + fill.toFixed(2) + ', rim ' + rim.toFixed(2));
+      });
+    });
+
+    document.documentElement.setAttribute('data-theme', original || 'vortex');
+    probe.remove();
+  })();
+
+  /* ---------------------------------------------------------------- */
   describe('Lesson diagrams');
 
   C.GAMES.forEach(function (game) {

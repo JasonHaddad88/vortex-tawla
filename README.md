@@ -38,7 +38,8 @@ server for you.
 | --- | --- |
 | `index.html` | App shell and the four views |
 | `tests.html` | Engine self-tests — open it, it runs on load |
-| `assets/css/vortex.css` | Shared Vortex theme, ported from VortexPortal |
+| `assets/css/themes.css` | Every colour token, for all three themes |
+| `assets/css/vortex.css` | Shared chrome: layout, controls, accessibility |
 | `assets/css/tawla.css` | Board, checkers, dice and app surfaces |
 | `assets/js/engine.js` | Mahbooseh rules. Pure, no DOM |
 | `assets/js/ai.js` | Position evaluator and the opponent |
@@ -54,7 +55,7 @@ server for you.
 | `tools/make_icons.py` | Regenerates the PNG icons from source |
 | `tools/test_sw.js` | 27 service-worker assertions, run under Node |
 | `tools/bench_ai.js` | Head-to-head AI strength test with duplicate dice |
-| `assets/js/tests.js` | 214 assertions over the engine, coach, content and offline setup |
+| `assets/js/tests.js` | 388 assertions: engine, coach, content, themes, offline setup |
 
 ## How the engine models the board
 
@@ -98,6 +99,55 @@ Two rules are worth knowing about if you touch the code:
   any die — ever. `isDeadlock` detects it and `result()` reports a draw. This is reachable in real
   play and is the cleanest argument for the house rule that scores the mana as an instant double
   loss (toggleable in the Play view).
+
+## Themes
+
+Three, switchable from the header, and a theme changes the entire app — banner, background, board,
+checkers, dice, buttons, lesson diagrams:
+
+- **Vortex** — the original. Black ground, purple and cyan, neon glow, palette ported from
+  VortexPortal.
+- **Nova** — brushed silver under glass. The only light theme, so the ink inverts to dark text on a
+  bright ground; borders are a cold electric blue with a soft bloom, and the checkers drop colour
+  entirely for graphite and near-black.
+- **Qahwa** (قهوة) — the coffeehouse table. Walnut frame, points inlaid in two woods, bone and
+  dark-walnut checkers, brass fittings.
+
+Every colour in the app comes from a token in `assets/css/themes.css`; **nothing else hardcodes
+one**, which is what makes a whole-app reskin a single attribute on `<html>`. Adding a theme means
+filling in that file's documented contract and touching nothing else. The choice is saved, and a
+tiny inline script in `<head>` applies it before first paint so there is no flash of the default
+palette on load. The PWA's `theme-color` follows the theme too, so an installed Nova doesn't sit in
+a black system frame.
+
+`tests.html` measures each theme rather than trusting the eye: every token is defined, `--text`,
+`--muted` and `--subtle` all clear WCAG AA 4.5:1 on all three surfaces, dice pips are legible, and
+the checkers stand out from the board they sit on. That last check earned its keep immediately —
+Nova's silver checkers are only 1.8:1 against a silver board and were being given a **white** rim,
+which outlined nothing at 1.16:1. Both Nova and Qahwa now let the rim carry the contrast.
+
+## Accessibility
+
+The board was the hard part: visually it is obvious that a purple disc sits on top of a cyan one,
+but to a screen reader it was an unnamed `<div>` full of unnamed `<div>`s — nothing to say at all.
+
+- The board is a `grid` with a **roving tabindex**: one tab stop, arrow keys to move between points,
+  Enter to pick up and drop. 26 tab stops would be unusable.
+- Every point, the bar and both trays announce their contents *and* their state — "Point 9, two of
+  your checkers, on top of one opponent's checker trapped underneath. You can move from here."
+  Layers are spoken because in Mahbooseh they are the whole game.
+- A polite live region narrates rolls, moves, hits, pins, the coach's verdict and the result. The
+  opponent's turn is announced once as a summary rather than five times in two seconds, which would
+  just lose the earlier lines.
+- Focus is restored after every move — the board is rebuilt on each change, so without this a
+  keyboard user is thrown back to the top of the page each time they play a checker.
+- The two sides are never distinguished by hue alone: the cyan checkers carry an inset ring. Vortex's
+  brand purple and cyan sit at only 2.7:1 in luminance, so the ring is doing real work.
+- `prefers-reduced-motion` is honoured, focus rings are visible on every surface (the default is
+  near-invisible on a dark ground), and there is a skip link.
+
+Verified through the accessibility tree, not by eye. **Not** verified with an actual screen reader —
+NVDA is free, and hearing whether the phrasing flows is the obvious next step.
 
 ## The coach
 

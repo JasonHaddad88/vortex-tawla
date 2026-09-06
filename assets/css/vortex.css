@@ -8,27 +8,6 @@
  * ===================================================================== */
 
 :root {
-  --bg: #06060a;
-  --surface: #0e0e18;
-  --surface-2: #14141f;
-  --border: rgba(168, 85, 247, 0.18);
-  --border-strong: rgba(168, 85, 247, 0.45);
-  --text: #e2e8f0;
-  /* Deliberate deviation from the Portal palette, which uses #6b7280
-     here. That is 3.8:1 on our darkest surface and this variable is used
-     for real body text (labels, captions, stat keys), so it failed WCAG
-     AA. #7c8492 is the nearest value that clears 4.5:1 (it measures
-     4.85:1 on --surface-2). Keep the rest of the palette in sync with
-     the Portal; this one is intentionally lighter. */
-  --muted: #7c8492;
-  --subtle: #9ca3af;
-  --purple: #a855f7;
-  --purple-glow: rgba(168, 85, 247, 0.45);
-  --cyan: #67e8f9;
-  --cyan-glow: rgba(103, 232, 249, 0.40);
-  --danger: #ef4444;
-  --success: #34d399;
-  --warning: #fbbf24;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -66,7 +45,7 @@
 /* The default focus ring is close to invisible on this background, and
    every interactive surface here is dark. */
 :focus-visible {
-  outline: 2px solid var(--cyan);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -94,13 +73,13 @@ html, body {
 
 body {
   background:
-    radial-gradient(ellipse at top left, rgba(168,85,247,0.10), transparent 60%),
-    radial-gradient(ellipse at bottom right, rgba(103,232,249,0.08), transparent 60%),
+    radial-gradient(ellipse at top left, var(--halo-1), transparent 60%),
+    radial-gradient(ellipse at bottom right, var(--halo-2), transparent 60%),
     var(--bg);
   background-attachment: fixed;
 }
 
-a { color: var(--cyan); text-decoration: none; }
+a { color: var(--accent-2); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
 /* ---- topbar ---------------------------------------------------- */
@@ -109,7 +88,7 @@ a:hover { text-decoration: underline; }
   display: flex; align-items: center; justify-content: space-between;
   padding: 1rem 2rem;
   border-bottom: 1px solid var(--border);
-  background: rgba(14, 14, 24, 0.72);
+  background: var(--glass);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   position: sticky; top: 0; z-index: 10;
@@ -117,16 +96,16 @@ a:hover { text-decoration: underline; }
 .brand { display: flex; align-items: center; gap: 0.75rem; }
 .brand .logo {
   width: 30px; height: 30px;
-  background: linear-gradient(135deg, var(--purple), var(--cyan));
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
   border-radius: 8px;
-  box-shadow: 0 0 18px var(--purple-glow);
+  box-shadow: 0 0 18px var(--accent-glow);
   position: relative;
   flex: none;
 }
 .brand .logo::after {
   content: '';
   position: absolute; inset: 5px;
-  background: var(--bg);
+  background: var(--logo-core);
   border-radius: 4px;
 }
 .brand h1 {
@@ -135,7 +114,7 @@ a:hover { text-decoration: underline; }
   letter-spacing: 0.12em; text-transform: uppercase;
 }
 .accent {
-  background: linear-gradient(90deg, var(--purple), var(--cyan));
+  background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 
@@ -149,7 +128,7 @@ nav button.navlink {
   transition: color .2s, border-color .2s;
 }
 nav button.navlink:hover { color: var(--text); }
-nav button.navlink.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+nav button.navlink.active { color: var(--accent-2); border-bottom-color: var(--accent-2); }
 
 .hamburger {
   display: none; flex-direction: column; gap: 4px;
@@ -194,10 +173,10 @@ main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
   font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.12em;
   border: 1px solid transparent; white-space: nowrap;
 }
-.badge.ok      { color: var(--success); border-color: rgba(52,211,153,.3);  background: rgba(52,211,153,.07); }
-.badge.warn    { color: var(--warning); border-color: rgba(251,191,36,.3);  background: rgba(251,191,36,.07); }
-.badge.bad     { color: var(--danger);  border-color: rgba(239,68,68,.3);   background: rgba(239,68,68,.07); }
-.badge.neutral { color: var(--muted);   border-color: rgba(107,114,128,.3); background: rgba(107,114,128,.07); }
+.badge.ok      { color: var(--success); border-color: color-mix(in srgb, var(--success) 35%, transparent);  background: color-mix(in srgb, var(--success) 10%, transparent); }
+.badge.warn    { color: var(--warning); border-color: color-mix(in srgb, var(--warning) 35%, transparent);  background: color-mix(in srgb, var(--warning) 10%, transparent); }
+.badge.bad     { color: var(--danger);  border-color: color-mix(in srgb, var(--danger) 35%, transparent);   background: color-mix(in srgb, var(--danger) 10%, transparent); }
+.badge.neutral { color: var(--muted);   border-color: color-mix(in srgb, var(--muted) 35%, transparent); background: color-mix(in srgb, var(--muted) 10%, transparent); }
 
 /* ---- controls -------------------------------------------------- */
 
@@ -205,8 +184,8 @@ main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
   display: inline-block;
   padding: 0.5rem 0.95rem;
   background: transparent;
-  color: var(--cyan);
-  border: 1px solid rgba(103, 232, 249, 0.3);
+  color: var(--accent-2);
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
   text-decoration: none;
   font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.1em;
@@ -214,21 +193,21 @@ main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
   transition: background .15s, box-shadow .15s, border-color .15s, color .15s;
 }
 .btn:hover:not(:disabled) {
-  background: rgba(103, 232, 249, 0.1);
-  border-color: var(--cyan);
-  box-shadow: 0 0 16px var(--cyan-glow);
+  background: var(--accent-2-wash);
+  border-color: var(--accent-2);
+  box-shadow: 0 0 16px var(--accent-2-glow);
   text-decoration: none;
 }
 .btn:disabled { opacity: .35; cursor: not-allowed; }
-.btn-primary { color: var(--purple); border-color: rgba(168, 85, 247, 0.35); }
+.btn-primary { color: var(--accent); border-color: var(--border-strong); }
 .btn-primary:hover:not(:disabled) {
-  background: rgba(168, 85, 247, 0.1); border-color: var(--purple);
-  box-shadow: 0 0 16px var(--purple-glow);
+  background: var(--accent-wash); border-color: var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow);
 }
-.btn-danger { color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
+.btn-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
 .btn-danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.1); border-color: var(--danger);
-  box-shadow: 0 0 16px rgba(239,68,68,.3);
+  background: color-mix(in srgb, var(--danger) 12%, transparent); border-color: var(--danger);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--danger) 35%, transparent);
 }
 .btn-small { padding: 0.3rem 0.65rem; font-size: 0.68rem; }
 
@@ -247,17 +226,17 @@ input, select, textarea {
   transition: border-color .15s, box-shadow .15s;
 }
 input:focus, select:focus, textarea:focus {
-  outline: none; border-color: var(--purple);
-  box-shadow: 0 0 0 3px var(--purple-glow);
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .flash {
   padding: 0.75rem 1rem; border-radius: 8px;
   margin-bottom: 1rem; font-size: 0.85rem;
 }
-.flash.error   { background: rgba(239,68,68,.1);   border: 1px solid rgba(239,68,68,.3);   color: var(--danger); }
-.flash.success { background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.3);  color: var(--success); }
-.flash.info    { background: rgba(103,232,249,.08);border: 1px solid rgba(103,232,249,.3); color: var(--cyan); }
+.flash.error   { background: color-mix(in srgb, var(--danger) 12%, transparent);  border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent);  color: var(--danger); }
+.flash.success { background: color-mix(in srgb, var(--success) 10%, transparent); border: 1px solid color-mix(in srgb, var(--success) 35%, transparent); color: var(--success); }
+.flash.info    { background: var(--accent-2-wash); border: 1px solid color-mix(in srgb, var(--accent-2) 35%, transparent); color: var(--accent-2); }
 
 /* ---- mobile ---------------------------------------------------- */
 

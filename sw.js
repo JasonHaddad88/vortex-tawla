@@ -16,6 +16,7 @@ var PRECACHE = [
   './',
   'index.html',
   'manifest.webmanifest',
+  'assets/css/themes.css',
   'assets/css/vortex.css',
   'assets/css/tawla.css',
   'assets/js/engine.js',
