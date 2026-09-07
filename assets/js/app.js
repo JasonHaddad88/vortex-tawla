@@ -72,7 +72,7 @@
   /* Themes                                                            */
   /* ---------------------------------------------------------------- */
 
-  var THEMES = ['vortex', 'nova', 'atrium', 'gtx', 'mono', 'qahwa'];
+  var THEMES = ['vortex', 'nova', 'atrium', 'gtx', 'mono', 'bamboo', 'qahwa'];
 
   /* Renamed themes keep working for anyone who already picked one —
      without this a saved 'novaplus' silently falls back to Vortex. */

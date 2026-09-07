@@ -345,11 +345,11 @@
  * ------------------------------------------------------------------- */
 :root[data-theme="atrium"] {
   --bg:            #0b0e13;
-  --halo-1:        rgba(90, 170, 255, 0.16);
-  --halo-2:        rgba(40, 60, 90, 0.55);
-  --surface:       rgba(30, 37, 48, 0.72);
-  --surface-2:     rgba(22, 28, 37, 0.78);
-  --glass:         rgba(16, 21, 28, 0.62);
+  --halo-1:        rgba(90, 170, 255, 0.22);
+  --halo-2:        rgba(30, 48, 74, 0.65);
+  --surface:       rgba(38, 48, 62, 0.55);
+  --surface-2:     rgba(24, 31, 41, 0.62);
+  --glass:         rgba(16, 21, 28, 0.55);
 
   --text:          #eaf2fb;
   --muted:         #93a3b8;
@@ -374,16 +374,17 @@
   --success:       #5ce0a8;
   --warning:       #ffd166;
 
-  /* Smoked glass over a dark cabinet. */
-  --board-1:       #171d26;
-  --board-2:       #0e131a;
+  /* Smoked glass over a dark cabinet — translucent on purpose, so the
+     blur behind the board actually shows. */
+  --board-1:       rgba(42, 54, 70, 0.55);
+  --board-2:       rgba(14, 19, 26, 0.72);
   --board-edge:    rgba(120, 190, 255, 0.42);
-  --board-inner:   rgba(120, 190, 255, 0.07);
+  --board-inner:   rgba(120, 190, 255, 0.10);
   --board-shadow:  rgba(0, 0, 0, 0.75);
   --pt-a:          rgba(150, 175, 205, 0.20);
   --pt-b:          rgba(88, 200, 255, 0.13);
-  --bar-1:         rgba(120, 190, 255, 0.12);
-  --bar-2:         rgba(255, 255, 255, 0.04);
+  --bar-1:         rgba(120, 190, 255, 0.16);
+  --bar-2:         rgba(255, 255, 255, 0.05);
   --tray-bg:       rgba(255, 255, 255, 0.05);
 
   --pt-movable:    rgba(88, 200, 255, 0.28);
@@ -493,4 +494,83 @@
   --die-glow:      rgba(255, 47, 47, 0.50);
 
   --focus-ring:    #ff5a5a;
+}
+
+/* ---------------------------------------------------------------------
+ * BAMBOO — a grove, not a games room. Deep leaf-green ground, points cut
+ * in pale culm and dark leaf, and the two sets of checkers are the two
+ * woods you would actually turn them from: bleached white wood against
+ * seasoned bamboo, which is a warm yellow-green rather than a true green.
+ * ------------------------------------------------------------------- */
+:root[data-theme="bamboo"] {
+  --bg:            #0c1810;
+  --halo-1:        rgba(126, 200, 116, 0.14);
+  --halo-2:        rgba(26, 74, 40, 0.45);
+  --surface:       #16281a;
+  --surface-2:     #1b3120;
+  --glass:         rgba(18, 41, 26, 0.78);
+
+  --text:          #edf7e8;
+  --muted:         #9ab894;
+  --subtle:        #cfe6c8;
+
+  --border:        rgba(126, 200, 116, 0.26);
+  --border-strong: rgba(150, 220, 138, 0.58);
+
+  --accent:        #7cc46e;
+  --accent-glow:   rgba(124, 196, 110, 0.42);
+  --accent-wash:   rgba(124, 196, 110, 0.12);
+  --accent-tint:   rgba(124, 196, 110, 0.24);
+  --accent-2:      #c3d977;
+  --accent-2-glow: rgba(195, 217, 119, 0.40);
+  --accent-2-wash: rgba(195, 217, 119, 0.12);
+
+  --brand-1:       #7cc46e;
+  --brand-2:       #c3d977;
+  --logo-core:     var(--bg);
+
+  --danger:        #e8836b;
+  --success:       #8fd99a;
+  --warning:       #e0c56a;
+
+  /* A woven mat: pale culm against deep leaf. */
+  --board-1:       #1d3522;
+  --board-2:       #122415;
+  --board-edge:    rgba(150, 220, 138, 0.50);
+  --board-inner:   rgba(0, 0, 0, 0.28);
+  --board-shadow:  rgba(0, 0, 0, 0.62);
+  --pt-a:          rgba(206, 224, 150, 0.26);
+  --pt-b:          rgba(46, 96, 52, 0.60);
+  --bar-1:         rgba(90, 150, 90, 0.34);
+  --bar-2:         rgba(30, 70, 40, 0.55);
+  --tray-bg:       rgba(0, 0, 0, 0.30);
+
+  --pt-movable:    rgba(124, 196, 110, 0.30);
+  --pt-selected:   rgba(124, 196, 110, 0.48);
+  --pt-target:     rgba(143, 217, 154, 0.34);
+  --pt-target-pin: rgba(224, 197, 106, 0.36);
+  --pt-risk-blot:  rgba(224, 197, 106, 0.24);
+  --pt-risk-mana:  rgba(232, 131, 107, 0.38);
+  --pt-hint-src:   rgba(195, 217, 119, 0.30);
+  --pt-hint-dst:   rgba(195, 217, 119, 0.20);
+
+  /* White wood: bleached, close-grained, slightly warm. */
+  --chk-w:         #eee7d2;
+  --chk-w-hi:      #fffdf4;
+  --chk-w-lo:      #b3ab92;
+  --chk-w-rim:     #fffef8;
+  /* Bamboo: seasoned culm — yellow-green, darker than the white wood so
+     the two never rely on hue alone. */
+  --chk-b:         #8ea24a;
+  --chk-b-hi:      #cddb8c;
+  --chk-b-lo:      #4e5c22;
+  --chk-b-rim:     #b9c977;
+  --chk-b-inset:   rgba(20, 34, 18, 0.45);
+
+  --die-1:         #f6f2e0;
+  --die-2:         #d3d5ae;
+  --die-pip:       #16281a;
+  --die-glow:      rgba(124, 196, 110, 0.40);
+
+  --focus-ring:    #c3d977;
 }
