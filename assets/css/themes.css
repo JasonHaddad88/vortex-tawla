@@ -425,8 +425,11 @@
  * ------------------------------------------------------------------- */
 :root[data-theme="gtx"] {
   --bg:            #08090b;
-  --halo-1:        rgba(255, 47, 47, 0.14);
+  --halo-1:        rgba(255, 47, 47, 0.16);
   --halo-2:        rgba(255, 255, 255, 0.04);
+  /* Woven carbon as the ground, with the red bloom sitting over it. */
+  --bg-texture:      url("../img/carbon.svg");
+  --bg-texture-size: 34px 34px;
   --surface:       rgba(23, 25, 29, 0.86);
   --surface-2:     rgba(15, 17, 20, 0.92);
   --glass:         rgba(10, 11, 13, 0.72);

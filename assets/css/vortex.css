@@ -71,11 +71,17 @@ html, body {
   min-height: 100vh;
 }
 
+/* Longhand rather than the shorthand so a theme can slot a repeating
+   texture under the haloes by setting two tokens and nothing else.
+   --bg-texture defaults to none, which costs the other themes nothing. */
 body {
-  background:
+  background-color: var(--bg);
+  background-image:
     radial-gradient(ellipse at top left, var(--halo-1), transparent 60%),
     radial-gradient(ellipse at bottom right, var(--halo-2), transparent 60%),
-    var(--bg);
+    var(--bg-texture, none);
+  background-size: auto, auto, var(--bg-texture-size, auto);
+  background-repeat: no-repeat, no-repeat, repeat;
   background-attachment: fixed;
 }
 

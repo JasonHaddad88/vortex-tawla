@@ -609,6 +609,19 @@
   box-shadow: inset 1px 0 0 var(--gloss-edge), inset -1px 0 0 var(--gloss-edge);
 }
 
+/* GTX: the dark checkers are carbon too. The weave is blended over the
+   sphere shading rather than laid on top of it, so each checker still
+   reads as round instead of turning into a flat printed disc. */
+:root[data-theme="gtx"] .chk.b {
+  background:
+    /* specular highlight, put back on top: the weave alone flattens the
+       disc into a printed circle */
+    radial-gradient(circle at 34% 30%, rgba(255, 255, 255, .28), rgba(255, 255, 255, 0) 46%),
+    url("../img/carbon.svg") 0 0 / 13px 13px repeat,
+    radial-gradient(circle at 34% 30%, var(--chk-b-hi), var(--chk-b) 62%, var(--chk-b-lo));
+  background-blend-mode: screen, overlay, normal;
+}
+
 /* ---- bamboo ----------------------------------------------------- */
 
 /* Ghost leaves behind the whole app. Painted through an SVG mask rather

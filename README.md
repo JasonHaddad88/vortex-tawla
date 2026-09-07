@@ -53,10 +53,11 @@ server for you.
 | `sw.js` | Offline cache |
 | `manifest.webmanifest` | Install metadata |
 | `assets/img/leaves.svg` | Ghost-leaf tile, used as a CSS mask by the Bamboo theme |
+| `assets/img/carbon.svg` | 2/2 twill carbon weave, used by the GTX theme |
 | `tools/make_icons.py` | Regenerates the PNG icons from source |
 | `tools/test_sw.js` | 27 service-worker assertions, run under Node |
 | `tools/bench_ai.js` | Head-to-head AI strength test with duplicate dice |
-| `assets/js/tests.js` | 421 assertions: engine, coach, content, themes, offline setup |
+| `assets/js/tests.js` | 422 assertions: engine, coach, content, themes, offline setup |
 
 ## How the engine models the board
 
@@ -113,10 +114,11 @@ checkers, dice, buttons, lesson diagrams:
 - **Atrium** — Nova taken deeper. Smoked grey glass over a dark graphite ground, lit from behind.
   The panels *and the board* are genuinely translucent, so the blur behind them has something to
   do; a colder cyan glows against the dark, and the checkers are polished chrome and black glass.
-- **GTX** — Mono's discipline with a race car's attitude. Carbon black and white, every edge red,
-  every surface glossy: glass panels, a specular sheen along the board's top edge, points
-  alternating white and red tint. The checkers stay black and white so the sides never depend on
-  the red — the dark set just gets a red rim.
+- **GTX** — Mono's discipline with a race car's attitude. Woven carbon fibre as the ground with a
+  red bloom over it, every edge red, every surface glossy: glass panels, a specular sheen along the
+  board's top edge, points alternating white and red tint. The dark checkers are carbon too. The
+  two sets stay black and white so the sides never depend on the red — the dark one just gets a red
+  rim.
 - **Mono** — no colour at all. Pure black, white text, shiny black and shiny white checkers where
   the highlight and rim do all the work. Even the status colours are drained to greys.
 - **Bamboo** — a grove rather than a games room. Deep leaf-green ground with ghost leaves drifting
@@ -126,6 +128,11 @@ checkers, dice, buttons, lesson diagrams:
   grain so they read as turned wood rather than plastic.
 - **Qahwa** (قهوة) — the coffeehouse table. Walnut frame, points inlaid in two woods, bone and
   dark-walnut checkers, brass fittings.
+
+A theme can lay a repeating texture under the page by setting `--bg-texture` and
+`--bg-texture-size`; it defaults to `none`, so the other themes pay nothing for it. GTX uses it for
+the carbon weave, and Bamboo paints its ghost leaves through a mask instead, since those want the
+theme's own colour rather than a fixed one.
 
 Atrium and GTX are both "a sheet of glass over a dark cabinet", so they share one treatment rather
 than two near-copies: a blur behind every translucent panel, a specular highlight along its top
