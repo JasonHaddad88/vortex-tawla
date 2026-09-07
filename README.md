@@ -52,10 +52,11 @@ server for you.
 | `assets/js/pwa.js` | Install prompt and service-worker registration |
 | `sw.js` | Offline cache |
 | `manifest.webmanifest` | Install metadata |
+| `assets/img/leaves.svg` | Ghost-leaf tile, used as a CSS mask by the Bamboo theme |
 | `tools/make_icons.py` | Regenerates the PNG icons from source |
 | `tools/test_sw.js` | 27 service-worker assertions, run under Node |
 | `tools/bench_ai.js` | Head-to-head AI strength test with duplicate dice |
-| `assets/js/tests.js` | 420 assertions: engine, coach, content, themes, offline setup |
+| `assets/js/tests.js` | 421 assertions: engine, coach, content, themes, offline setup |
 
 ## How the engine models the board
 
@@ -118,9 +119,11 @@ checkers, dice, buttons, lesson diagrams:
   the red — the dark set just gets a red rim.
 - **Mono** — no colour at all. Pure black, white text, shiny black and shiny white checkers where
   the highlight and rim do all the work. Even the status colours are drained to greys.
-- **Bamboo** — a grove rather than a games room. Deep leaf-green ground, points cut in pale culm
-  and dark leaf, and the two sets are the woods you would actually turn them from: bleached white
-  wood against seasoned bamboo, which is a warm yellow-green rather than a true green.
+- **Bamboo** — a grove rather than a games room. Deep leaf-green ground with ghost leaves drifting
+  behind the whole app, points cut in pale culm against dark leaf, and the two sets are the woods
+  you would actually turn them from: Player 1 in seasoned bamboo (a warm yellow-tan — cured bamboo
+  is not the colour of the plant), Player 2 in bleached white wood. Both carry a fine diagonal
+  grain so they read as turned wood rather than plastic.
 - **Qahwa** (قهوة) — the coffeehouse table. Walnut frame, points inlaid in two woods, bone and
   dark-walnut checkers, brass fittings.
 

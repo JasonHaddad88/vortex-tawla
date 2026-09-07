@@ -609,6 +609,48 @@
   box-shadow: inset 1px 0 0 var(--gloss-edge), inset -1px 0 0 var(--gloss-edge);
 }
 
+/* ---- bamboo ----------------------------------------------------- */
+
+/* Ghost leaves behind the whole app. Painted through an SVG mask rather
+   than drawn as an image, so the colour comes from the theme and the tile
+   stays reusable. Fixed so it reads as a backdrop the app sits on rather
+   than wallpaper that scrolls with it. */
+:root[data-theme="bamboo"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--leaf-ink);
+  -webkit-mask-image: url("../img/leaves.svg");
+  mask-image: url("../img/leaves.svg");
+  -webkit-mask-size: 520px 520px;
+  mask-size: 520px 520px;
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+}
+/* The leaves are behind a fixed layer, so the content needs its own
+   stacking context or it would sit underneath them. */
+:root[data-theme="bamboo"] main,
+:root[data-theme="bamboo"] .topbar { position: relative; z-index: 1; }
+
+/* Wood, not plastic: a fine diagonal grain over each checker. The bamboo
+   set gets a stronger, warmer grain; the white wood a paler one. */
+:root[data-theme="bamboo"] .chk.w {
+  background:
+    repeating-linear-gradient(114deg,
+      rgba(255, 246, 214, .16) 0 2px,
+      rgba(74, 58, 18, .12) 2px 5px),
+    radial-gradient(circle at 34% 30%, var(--chk-w-hi), var(--chk-w) 62%, var(--chk-w-lo));
+}
+:root[data-theme="bamboo"] .chk.b {
+  background:
+    repeating-linear-gradient(114deg,
+      rgba(255, 255, 255, .20) 0 2px,
+      rgba(120, 104, 66, .10) 2px 5px),
+    radial-gradient(circle at 34% 30%, var(--chk-b-hi), var(--chk-b) 62%, var(--chk-b-lo));
+}
+
 /* ---- theme picker ---------------------------------------------- */
 
 .themepick { flex-direction: row; align-items: center; gap: .4rem; }

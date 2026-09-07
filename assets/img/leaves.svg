@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Bamboo ghost-leaf tile.
+
+  Used as a CSS mask, not an image: the fill is plain white and the theme
+  paints through it, so the leaves take the theme's own green and a
+  future theme could reuse the same tile in its own colour.
+
+  Leaves sit well inside the 560x560 tile with a few crossing the edges
+  in matched pairs, so the repeat does not show an obvious seam or an
+  empty gutter.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="560" viewBox="0 0 560 560">
+  <defs>
+    <!-- A lanceolate bamboo leaf, ~72 long, tip at the right. -->
+    <g id="leaf">
+      <path d="M0,0 C20,-9 46,-6 72,7 C46,21 19,17 0,0 Z" fill="#fff"/>
+      <path d="M2,1 L69,7" stroke="#fff" stroke-width="1.1" fill="none" opacity=".55"/>
+    </g>
+  </defs>
+
+  <g fill="#fff">
+    <!-- scattered, varied in size and angle so no two read as a pair -->
+    <use href="#leaf" transform="translate(48,86) rotate(-24) scale(1.15)"  opacity=".85"/>
+    <use href="#leaf" transform="translate(96,150) rotate(18) scale(.8)"    opacity=".55"/>
+    <use href="#leaf" transform="translate(210,52) rotate(41) scale(.95)"   opacity=".7"/>
+    <use href="#leaf" transform="translate(330,120) rotate(-12) scale(1.3)" opacity=".6"/>
+    <use href="#leaf" transform="translate(430,38) rotate(63) scale(.75)"   opacity=".8"/>
+    <use href="#leaf" transform="translate(150,268) rotate(-52) scale(1.05)" opacity=".65"/>
+    <use href="#leaf" transform="translate(268,318) rotate(9) scale(.88)"   opacity=".8"/>
+    <use href="#leaf" transform="translate(392,262) rotate(-38) scale(1.2)" opacity=".55"/>
+    <use href="#leaf" transform="translate(62,392) rotate(27) scale(.92)"   opacity=".75"/>
+    <use href="#leaf" transform="translate(196,462) rotate(-16) scale(1.1)" opacity=".6"/>
+    <use href="#leaf" transform="translate(340,432) rotate(48) scale(.82)"  opacity=".8"/>
+    <use href="#leaf" transform="translate(462,368) rotate(-6) scale(1.0)"  opacity=".65"/>
+    <use href="#leaf" transform="translate(470,494) rotate(33) scale(.9)"   opacity=".7"/>
+
+    <!-- edge pairs: each of these is duplicated one tile away so the
+         shape continues across the seam instead of being cut off -->
+    <use href="#leaf" transform="translate(-30,220) rotate(-8) scale(1.1)"  opacity=".6"/>
+    <use href="#leaf" transform="translate(530,220) rotate(-8) scale(1.1)"  opacity=".6"/>
+    <use href="#leaf" transform="translate(250,-26) rotate(72) scale(.95)"  opacity=".7"/>
+    <use href="#leaf" transform="translate(250,534) rotate(72) scale(.95)"  opacity=".7"/>
+  </g>
+</svg>

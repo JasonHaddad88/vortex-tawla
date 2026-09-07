@@ -10,13 +10,14 @@
  * missing from this list only shows up as a broken app on a train.
  * ===================================================================== */
 
-var CACHE = 'vortex-tawla-v7';
+var CACHE = 'vortex-tawla-v8';
 
 var PRECACHE = [
   './',
   'index.html',
   'manifest.webmanifest',
   'assets/css/themes.css',
+  'assets/img/leaves.svg',
   'assets/css/vortex.css',
   'assets/css/tawla.css',
   'assets/js/engine.js',

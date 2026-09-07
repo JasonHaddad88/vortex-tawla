@@ -554,18 +554,23 @@
   --pt-hint-src:   rgba(195, 217, 119, 0.30);
   --pt-hint-dst:   rgba(195, 217, 119, 0.20);
 
-  /* White wood: bleached, close-grained, slightly warm. */
-  --chk-w:         #eee7d2;
-  --chk-w-hi:      #fffdf4;
-  --chk-w-lo:      #b3ab92;
-  --chk-w-rim:     #fffef8;
-  /* Bamboo: seasoned culm — yellow-green, darker than the white wood so
-     the two never rely on hue alone. */
-  --chk-b:         #8ea24a;
-  --chk-b-hi:      #cddb8c;
-  --chk-b-lo:      #4e5c22;
-  --chk-b-rim:     #b9c977;
-  --chk-b-inset:   rgba(20, 34, 18, 0.45);
+  /* Player 1 is bamboo: seasoned culm, a warm yellow-tan rather than a
+     leaf green — cured bamboo is not the colour of the plant. */
+  --chk-w:         #b39a55;
+  --chk-w-hi:      #e6d59a;
+  --chk-w-lo:      #6f5e28;
+  --chk-w-rim:     #d6c48a;
+  /* Player 2 is white wood: bleached, close-grained, slightly warm. It is
+     the lighter of the two, so the sides still differ in lightness and
+     not only in hue. */
+  --chk-b:         #ece5d1;
+  --chk-b-hi:      #fffdf4;
+  --chk-b-lo:      #b0a892;
+  --chk-b-rim:     #6a5f43;
+  --chk-b-inset:   rgba(96, 84, 52, 0.42);
+
+  /* Ghost leaves drifting behind everything. */
+  --leaf-ink:      rgba(150, 214, 138, 0.085);
 
   --die-1:         #f6f2e0;
   --die-2:         #d3d5ae;
