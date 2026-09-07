@@ -55,7 +55,7 @@ server for you.
 | `tools/make_icons.py` | Regenerates the PNG icons from source |
 | `tools/test_sw.js` | 27 service-worker assertions, run under Node |
 | `tools/bench_ai.js` | Head-to-head AI strength test with duplicate dice |
-| `assets/js/tests.js` | 404 assertions: engine, coach, content, themes, offline setup |
+| `assets/js/tests.js` | 412 assertions: engine, coach, content, themes, offline setup |
 
 ## How the engine models the board
 
@@ -102,20 +102,28 @@ Two rules are worth knowing about if you touch the code:
 
 ## Themes
 
-Five, switchable from the header, and a theme changes the entire app — banner, background, board,
+Six, switchable from the header, and a theme changes the entire app — banner, background, board,
 checkers, dice, buttons, lesson diagrams:
 
 - **Vortex** — the original. Black ground, purple and cyan, neon glow, palette ported from
   VortexPortal.
 - **Nova** — brushed silver under glass. A light theme, so the ink inverts to dark text on a bright
   ground; cold electric-blue borders, and the checkers drop colour for graphite and near-black.
-- **Nova Plus** — Nova taken deeper. Smoked grey glass over a dark graphite ground, lit from
-  behind: translucent blurred panels, a colder cyan that actually glows, polished chrome and
-  black-glass checkers.
+- **Atrium** — Nova taken deeper. Smoked grey glass over a dark graphite ground, lit from behind:
+  translucent blurred panels, a colder cyan that actually glows, polished chrome and black-glass
+  checkers.
+- **GTX** — Mono's discipline with a race car's attitude. Carbon black and white, every edge red,
+  every surface glossy: glass panels, a specular sheen along the board's top edge, points
+  alternating white and red tint. The checkers stay black and white so the sides never depend on
+  the red — the dark set just gets a red rim.
 - **Mono** — no colour at all. Pure black, white text, shiny black and shiny white checkers where
   the highlight and rim do all the work. Even the status colours are drained to greys.
 - **Qahwa** (قهوة) — the coffeehouse table. Walnut frame, points inlaid in two woods, bone and
   dark-walnut checkers, brass fittings.
+
+Renaming a theme keeps working for anyone who already chose it: `THEME_ALIASES` in `app.js` maps
+the old id to the new one (and the pre-paint boot script does the same), so a saved `novaplus`
+loads as Atrium and is rewritten on the next save rather than silently falling back to Vortex.
 
 Selects are drawn with `appearance: none` and a CSS chevron, because a native `<select>` keeps the
 OS chrome and ignores the palette entirely — which is exactly how the theme picker ended up being

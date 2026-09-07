@@ -72,9 +72,14 @@
   /* Themes                                                            */
   /* ---------------------------------------------------------------- */
 
-  var THEMES = ['vortex', 'nova', 'novaplus', 'mono', 'qahwa'];
+  var THEMES = ['vortex', 'nova', 'atrium', 'gtx', 'mono', 'qahwa'];
+
+  /* Renamed themes keep working for anyone who already picked one —
+     without this a saved 'novaplus' silently falls back to Vortex. */
+  var THEME_ALIASES = { novaplus: 'atrium' };
 
   function applyTheme(id) {
+    id = THEME_ALIASES[id] || id;
     if (THEMES.indexOf(id) < 0) id = 'vortex';
     document.documentElement.setAttribute('data-theme', id);
     $('theme').value = id;

@@ -337,13 +337,13 @@
 }
 
 /* ---------------------------------------------------------------------
- * NOVA PLUS — Nova taken deeper. Smoked grey glass rather than silver,
- * lit from behind: the ground is a dark graphite gradient, panels are
+ * ATRIUM — Nova taken deeper. Smoked grey glass rather than silver, lit
+ * from behind: the ground is a dark graphite gradient, panels are
  * translucent and blurred, and the blue is a colder, more electric cyan
  * that actually glows against the dark. Checkers are polished chrome and
  * black glass.
  * ------------------------------------------------------------------- */
-:root[data-theme="novaplus"] {
+:root[data-theme="atrium"] {
   --bg:            #0b0e13;
   --halo-1:        rgba(90, 170, 255, 0.16);
   --halo-2:        rgba(40, 60, 90, 0.55);
@@ -412,4 +412,85 @@
   --die-glow:      rgba(88, 200, 255, 0.45);
 
   --focus-ring:    #8fe3ff;
+}
+
+/* ---------------------------------------------------------------------
+ * GTX — Mono's discipline with a race car's attitude. Carbon black and
+ * white, but every edge is red and every surface has a gloss on it:
+ * the panels are glassy, the board carries a hard specular sheen, and
+ * the points alternate white and red tint. Checkers stay black and white
+ * so the two sides never depend on the red — the black ones just get a
+ * red rim.
+ * ------------------------------------------------------------------- */
+:root[data-theme="gtx"] {
+  --bg:            #08090b;
+  --halo-1:        rgba(255, 47, 47, 0.14);
+  --halo-2:        rgba(255, 255, 255, 0.04);
+  --surface:       rgba(23, 25, 29, 0.86);
+  --surface-2:     rgba(15, 17, 20, 0.92);
+  --glass:         rgba(10, 11, 13, 0.72);
+
+  --text:          #f5f7fa;
+  --muted:         #9aa3ad;
+  --subtle:        #ccd3da;
+
+  --border:        rgba(255, 47, 47, 0.34);
+  --border-strong: rgba(255, 47, 47, 0.78);
+
+  --accent:        #ff2f2f;
+  --accent-glow:   rgba(255, 47, 47, 0.55);
+  --accent-wash:   rgba(255, 47, 47, 0.12);
+  --accent-tint:   rgba(255, 47, 47, 0.24);
+  /* Brushed metal as the second accent: red does the shouting, silver
+     does the reading. */
+  --accent-2:      #d7dde3;
+  --accent-2-glow: rgba(215, 221, 227, 0.40);
+  --accent-2-wash: rgba(215, 221, 227, 0.10);
+
+  --brand-1:       #ff2f2f;
+  --brand-2:       #d7dde3;
+  --logo-core:     var(--bg);
+
+  --danger:        #ff5c5c;
+  --success:       #4ade80;
+  --warning:       #fbbf24;
+
+  --board-1:       #16181c;
+  --board-2:       #0a0b0d;
+  --board-edge:    rgba(255, 47, 47, 0.60);
+  --board-inner:   rgba(255, 47, 47, 0.06);
+  --board-shadow:  rgba(0, 0, 0, 0.80);
+  --pt-a:          rgba(255, 255, 255, 0.10);
+  --pt-b:          rgba(255, 47, 47, 0.16);
+  --bar-1:         rgba(255, 47, 47, 0.16);
+  --bar-2:         rgba(255, 255, 255, 0.04);
+  --tray-bg:       rgba(255, 255, 255, 0.05);
+
+  --pt-movable:    rgba(255, 47, 47, 0.30);
+  --pt-selected:   rgba(255, 47, 47, 0.50);
+  --pt-target:     rgba(74, 222, 128, 0.30);
+  --pt-target-pin: rgba(251, 191, 36, 0.32);
+  --pt-risk-blot:  rgba(251, 191, 36, 0.22);
+  --pt-risk-mana:  rgba(255, 92, 92, 0.40);
+  --pt-hint-src:   rgba(215, 221, 227, 0.28);
+  --pt-hint-dst:   rgba(215, 221, 227, 0.18);
+
+  /* Gloss white and gloss black. The red rim on the dark set is the
+     sporty detail and doubles as the non-colour cue. */
+  --chk-w:         #f0f3f6;
+  --chk-w-hi:      #ffffff;
+  --chk-w-lo:      #949ca5;
+  --chk-w-rim:     #ffffff;
+  --chk-b:         #121417;
+  --chk-b-hi:      #5f676f;
+  --chk-b-lo:      #000000;
+  --chk-b-rim:     #ff3b3b;
+  --chk-b-inset:   rgba(255, 255, 255, 0.26);
+
+  --die-1:         #ffffff;
+  --die-2:         #c3c9d0;
+  --die-pip:       #0a0b0d;
+  --die-glow:      rgba(255, 47, 47, 0.50);
+
+  --focus-ring:    #ff5a5a;
 }
